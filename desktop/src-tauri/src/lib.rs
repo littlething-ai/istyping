@@ -3,6 +3,149 @@ use rust_socketio::{ClientBuilder, Payload, RawClient};
 use serde_json::json;
 use enigo::{Enigo, Settings, Key, Direction, Keyboard}; 
 use std::thread;
+use std::time::Duration;
+
+use windows::Win32::Foundation::{HWND, LPARAM, WPARAM, BOOL};
+use windows::Win32::UI::Input::KeyboardAndMouse::{
+    SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_UNICODE, KEYEVENTF_KEYUP, VIRTUAL_KEY,
+    VK_SHIFT, VK_OEM_COMMA, VK_OEM_PERIOD, VK_OEM_1, VK_OEM_2, VK_OEM_3, VK_OEM_4, VK_OEM_5, VK_OEM_6, VK_OEM_7, VK_OEM_MINUS
+};
+use windows::Win32::UI::WindowsAndMessaging::{
+    GetForegroundWindow, SendMessageW, WM_IME_CONTROL
+};
+use windows::Win32::UI::Input::Ime::{ImmGetDefaultIMEWnd, IME_CMODE_NATIVE};
+
+// 引入动态加载
+use libloading::{Library, Symbol};
+
+const IMC_GETCONVERSIONMODE: WPARAM = WPARAM(0x0001);
+
+// 定义 FFI 函数签名
+type GetWindowThreadProcessIdFn = unsafe extern "system" fn(HWND, *mut u32) -> u32;
+type GetKeyboardLayoutFn = unsafe extern "system" fn(u32) -> isize;
+
+// 映射表
+fn get_punctuation_mapping(c: char) -> Option<(VIRTUAL_KEY, bool)> {
+    match c {
+        '，' | ',' => Some((VK_OEM_COMMA, false)),
+        '。' | '.' => Some((VK_OEM_PERIOD, false)),
+        '；' | ';' => Some((VK_OEM_1, false)),
+        '：' | ':' => Some((VK_OEM_1, true)),
+        '？' | '?' => Some((VK_OEM_2, true)),
+        '/' => Some((VK_OEM_2, false)),
+        '、' | '\\' => Some((VK_OEM_5, false)),
+        '‘' | '’' | '\'' => Some((VK_OEM_7, false)),
+        '“' | '”' | '"' => Some((VK_OEM_7, true)),
+        '【' | '[' => Some((VK_OEM_4, false)),
+        '】' | ']' => Some((VK_OEM_6, false)),
+        '—' | '_' => Some((VK_OEM_MINUS, true)),
+        '-' => Some((VK_OEM_MINUS, false)),
+        '~' => Some((VK_OEM_3, true)),
+        '`' => Some((VK_OEM_3, false)),
+        _ => None,
+    }
+}
+
+fn send_physical_key(vk: VIRTUAL_KEY, need_shift: bool) {
+    if need_shift {
+        let shift_down = INPUT {
+            r#type: INPUT_KEYBOARD,
+            Anonymous: INPUT_0 { ki: KEYBDINPUT { wVk: VK_SHIFT, wScan: 0, dwFlags: windows::Win32::UI::Input::KeyboardAndMouse::KEYBD_EVENT_FLAGS(0), time: 0, dwExtraInfo: 0 } },
+        };
+        unsafe { SendInput(&[shift_down], std::mem::size_of::<INPUT>() as i32); }
+    }
+    let key_down = INPUT {
+        r#type: INPUT_KEYBOARD,
+        Anonymous: INPUT_0 { ki: KEYBDINPUT { wVk: vk, wScan: 0, dwFlags: windows::Win32::UI::Input::KeyboardAndMouse::KEYBD_EVENT_FLAGS(0), time: 0, dwExtraInfo: 0 } },
+    };
+    let key_up = INPUT {
+        r#type: INPUT_KEYBOARD,
+        Anonymous: INPUT_0 { ki: KEYBDINPUT { wVk: vk, wScan: 0, dwFlags: KEYEVENTF_KEYUP, time: 0, dwExtraInfo: 0 } },
+    };
+    unsafe { SendInput(&[key_down, key_up], std::mem::size_of::<INPUT>() as i32); }
+    if need_shift {
+        let shift_up = INPUT {
+            r#type: INPUT_KEYBOARD,
+            Anonymous: INPUT_0 { ki: KEYBDINPUT { wVk: VK_SHIFT, wScan: 0, dwFlags: KEYEVENTF_KEYUP, time: 0, dwExtraInfo: 0 } },
+        };
+        unsafe { SendInput(&[shift_up], std::mem::size_of::<INPUT>() as i32); }
+    }
+}
+
+fn send_unicode_char(c: char) {
+    let mut buf = [0; 2];
+    for u16_ref in c.encode_utf16(&mut buf) {
+        let u16_code = *u16_ref;
+        let input_down = INPUT {
+            r#type: INPUT_KEYBOARD,
+            Anonymous: INPUT_0 { ki: KEYBDINPUT { wVk: VIRTUAL_KEY(0), wScan: u16_code, dwFlags: KEYEVENTF_UNICODE, time: 0, dwExtraInfo: 0 } },
+        };
+        let input_up = INPUT {
+            r#type: INPUT_KEYBOARD,
+            Anonymous: INPUT_0 { ki: KEYBDINPUT { wVk: VIRTUAL_KEY(0), wScan: u16_code, dwFlags: KEYEVENTF_UNICODE | KEYEVENTF_KEYUP, time: 0, dwExtraInfo: 0 } },
+        };
+        unsafe { SendInput(&[input_down, input_up], std::mem::size_of::<INPUT>() as i32); }
+    }
+}
+
+fn send_sequence(text: &str) {
+    let target_hwnd = unsafe { GetForegroundWindow() };
+    let ime_hwnd = unsafe { ImmGetDefaultIMEWnd(target_hwnd) };
+    
+    // 动态加载 user32 来获取 LangID
+    let mut lang_id: u32 = 0;
+    if let Ok(user32) = unsafe { Library::new("user32.dll") } {
+        unsafe {
+            if let (Ok(get_tid), Ok(get_hkl)) = (
+                user32.get::<Symbol<GetWindowThreadProcessIdFn>>(b"GetWindowThreadProcessId"),
+                user32.get::<Symbol<GetKeyboardLayoutFn>>(b"GetKeyboardLayout")
+            ) {
+                let tid = get_tid(target_hwnd, std::ptr::null_mut());
+                let hkl = get_hkl(tid);
+                lang_id = (hkl as u32) & 0xFFFF;
+            }
+        }
+    }
+
+    let mut is_native_mode = false;
+    if ime_hwnd.0 != 0 {
+        let mode_res = unsafe { SendMessageW(ime_hwnd, WM_IME_CONTROL, IMC_GETCONVERSIONMODE, LPARAM(0)) };
+        let conversion_mode = mode_res.0 as u32;
+        is_native_mode = (conversion_mode & IME_CMODE_NATIVE.0) != 0;
+        
+        println!("[DEBUG] LangID: 0x{:04X}, IME HWND: {:?}, Mode: 0x{:08X} => {}", 
+            lang_id,
+            ime_hwnd, 
+            conversion_mode, 
+            if is_native_mode { "【中文模式】" } else { "【英文模式】" }
+        );
+    }
+
+    for c in text.chars() {
+        let mut use_physical_key = false;
+        let mut vk_to_press = VIRTUAL_KEY(0);
+        let mut need_shift = false;
+
+        if is_native_mode {
+            if let Some((vk, shift)) = get_punctuation_mapping(c) {
+                use_physical_key = true;
+                vk_to_press = vk;
+                need_shift = shift;
+            }
+        }
+
+        if use_physical_key {
+            println!("Char '{}' -> Physical", c);
+            send_physical_key(vk_to_press, need_shift);
+        } else {
+            let mut buf = [0; 2];
+            let encoded_slice = c.encode_utf16(&mut buf);
+            println!("Char '{}' -> Unicode ({:?})", c, encoded_slice);
+            send_unicode_char(c);
+        }
+        thread::sleep(Duration::from_millis(50));
+    }
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -16,101 +159,55 @@ pub fn run() {
                     .build(),
             )?;
         }
-
         let app_handle = app.handle().clone();
-
-        println!("Setting up Socket.io thread...");
-
         thread::spawn(move || {
-            println!("Connecting to Socket.io server...");
-
             let app_handle_for_text = app_handle.clone();
             let app_handle_for_control = app_handle.clone();
-
             let on_text = move |payload: Payload, _socket: RawClient| {
-                println!("Typing Event Received: {:?}", payload);
-                
-                // 解析文本的逻辑
                 let text_opt: Option<String> = match payload {
-                    // rust_socketio 0.6.0: Payload::Text(Vec<Value>)
-                    Payload::Text(args) => {
-                        // args[0] 应该是 { "text": "..." }
-                        args.get(0).and_then(|v| {
-                            // v 是 { text: "..." }
-                            v.get("text").and_then(|t| t.as_str()).map(|s| s.to_string())
-                        })
-                    },
-                    // 兼容旧版或纯字符串
-                    Payload::String(s) => {
-                        if let Ok(val) = serde_json::from_str::<serde_json::Value>(&s) {
-                             val.get("text").and_then(|t| t.as_str()).map(|s| s.to_string())
-                        } else {
-                             None
-                        }
-                    },
+                    Payload::Text(args) => args.get(0).and_then(|v| {
+                        if v.is_string() { v.as_str().map(|s| s.to_string()) }
+                        else { v.get("text").and_then(|t| t.as_str()).map(|s| s.to_string()) }
+                    }),
+                    Payload::String(s) => serde_json::from_str::<serde_json::Value>(&s).ok()
+                        .and_then(|v| if v.is_string() { v.as_str().map(|s| s.to_string()) } 
+                                      else { v.get("text").and_then(|t| t.as_str()).map(|s| s.to_string()) }),
                     _ => None
                 };
-
                 if let Some(text) = text_opt {
-                     println!("Typing: {}", text);
                      let _ = app_handle_for_text.emit("debug-log", json!({ "type": "text", "content": text }));
-                     if let Ok(mut enigo) = Enigo::new(&Settings::default()) {
-                         let _ = enigo.text(&text);
-                     }
+                     send_sequence(&text);
                 }
             };
-            
             let on_control = move |payload: Payload, _socket: RawClient| {
                  let action_opt: Option<String> = match payload {
-                     Payload::Text(args) => {
-                         args.get(0).and_then(|v| {
-                             v.get("action").and_then(|a| a.as_str()).map(|s| s.to_string())
-                         })
-                     },
-                     Payload::String(s) => {
-                         serde_json::from_str::<serde_json::Value>(&s).ok()
-                             .and_then(|v| v.get("action").and_then(|a| a.as_str()).map(|s| s.to_string()))
-                     },
+                     Payload::Text(args) => args.get(0).and_then(|v| v.get("action").and_then(|a| a.as_str()).map(|s| s.to_string())),
+                     Payload::String(s) => serde_json::from_str::<serde_json::Value>(&s).ok()
+                         .and_then(|v| v.get("action").and_then(|a| a.as_str()).map(|s| s.to_string())),
                      _ => None
                  };
-
                  if let Some(action) = action_opt {
-                     println!("Control Action: {}", action);
                      let _ = app_handle_for_control.emit("debug-log", json!({ "type": "control", "content": action }));
                      if let Ok(mut enigo) = Enigo::new(&Settings::default()) {
                          match action.as_str() {
                              "enter" => { let _ = enigo.key(Key::Return, Direction::Click); },
                              "backspace" => { let _ = enigo.key(Key::Backspace, Direction::Click); },
-                             _ => {}
+                             _ => {} 
                          }
                      }
                  }
             };
-
-            // 注册 Open 回调，发送 join_room
             let on_open = |_: Payload, socket: RawClient| {
-                println!("SocketIO Connected! Joining room...");
-                // Emit 也是接受 Vec<Value> 或者 impl Into<Payload>
-                // json!("demo-room") 应该会被转为 payload
-                if let Err(e) = socket.emit("join_room", json!("demo-room")) {
-                    eprintln!("Failed to join room: {}", e);
-                }
+                let _ = socket.emit("join_room", json!("demo-room"));
             };
-
-            let socket_result = ClientBuilder::new("http://10.10.114.222:3000")
+            ClientBuilder::new("http://10.10.114.222:3000")
                 .namespace("/")
-                .on("error", |err, _| eprintln!("SocketIO Error: {:#?}", err))
                 .on("open", on_open)
                 .on("receive_text", on_text)
                 .on("receive_control", on_control)
-                .connect();
-
-            match socket_result {
-                Ok(_) => println!("Socket connection closed."),
-                Err(e) => eprintln!("Socket connection failed: {}", e),
-            }
+                .connect()
+                .ok();
         });
-
         Ok(())
     })
     .run(tauri::generate_context!())
