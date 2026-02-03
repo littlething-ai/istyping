@@ -13,35 +13,27 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
 use windows::Win32::UI::WindowsAndMessaging::{
     GetForegroundWindow, SendMessageW, WM_IME_CONTROL
 };
-use windows::Win32::UI::Input::Ime::{ImmGetDefaultIMEWnd, IME_CMODE_NATIVE};
+use windows::Win32::UI::Input::Ime::{ImmGetDefaultIMEWnd};
 
-// 引入动态加载
-use libloading::{Library, Symbol};
+// 关键常量：获取开启状态 (对应 Shift 切换)
+const IMC_GETOPENSTATUS: WPARAM = WPARAM(0x0005);
 
-const IMC_GETCONVERSIONMODE: WPARAM = WPARAM(0x0001);
-
-// 定义 FFI 函数签名
-type GetWindowThreadProcessIdFn = unsafe extern "system" fn(HWND, *mut u32) -> u32;
-type GetKeyboardLayoutFn = unsafe extern "system" fn(u32) -> isize;
-
-// 映射表
-fn get_punctuation_mapping(c: char) -> Option<(VIRTUAL_KEY, bool)> {
+// 映射表：仅包含全角中文标点 -> (虚拟键码, 是否需要 Shift)
+// 只有这些特定的全角标点在中文模式下会被 Unicode 注入吞掉，因此需要走物理映射。
+fn get_chinese_punctuation_mapping(c: char) -> Option<(VIRTUAL_KEY, bool)> {
     match c {
-        '，' | ',' => Some((VK_OEM_COMMA, false)),
-        '。' | '.' => Some((VK_OEM_PERIOD, false)),
-        '；' | ';' => Some((VK_OEM_1, false)),
-        '：' | ':' => Some((VK_OEM_1, true)),
-        '？' | '?' => Some((VK_OEM_2, true)),
-        '/' => Some((VK_OEM_2, false)),
-        '、' | '\\' => Some((VK_OEM_5, false)),
-        '‘' | '’' | '\'' => Some((VK_OEM_7, false)),
-        '“' | '”' | '"' => Some((VK_OEM_7, true)),
-        '【' | '[' => Some((VK_OEM_4, false)),
-        '】' | ']' => Some((VK_OEM_6, false)),
-        '—' | '_' => Some((VK_OEM_MINUS, true)),
-        '-' => Some((VK_OEM_MINUS, false)),
+        '，' => Some((VK_OEM_COMMA, false)),
+        '。' => Some((VK_OEM_PERIOD, false)),
+        '；' => Some((VK_OEM_1, false)),
+        '：' => Some((VK_OEM_1, true)),
+        '？' => Some((VK_OEM_2, true)),
+        '、' => Some((VK_OEM_5, false)),
+        '‘' | '’' => Some((VK_OEM_7, false)),
+        '“' | '”' => Some((VK_OEM_7, true)),
+        '【' => Some((VK_OEM_4, false)),
+        '】' => Some((VK_OEM_6, false)),
+        '—' => Some((VK_OEM_MINUS, true)),
         '~' => Some((VK_OEM_3, true)),
-        '`' => Some((VK_OEM_3, false)),
         _ => None,
     }
 }
@@ -92,32 +84,15 @@ fn send_sequence(text: &str) {
     let target_hwnd = unsafe { GetForegroundWindow() };
     let ime_hwnd = unsafe { ImmGetDefaultIMEWnd(target_hwnd) };
     
-    // 动态加载 user32 来获取 LangID
-    let mut lang_id: u32 = 0;
-    if let Ok(user32) = unsafe { Library::new("user32.dll") } {
-        unsafe {
-            if let (Ok(get_tid), Ok(get_hkl)) = (
-                user32.get::<Symbol<GetWindowThreadProcessIdFn>>(b"GetWindowThreadProcessId"),
-                user32.get::<Symbol<GetKeyboardLayoutFn>>(b"GetKeyboardLayout")
-            ) {
-                let tid = get_tid(target_hwnd, std::ptr::null_mut());
-                let hkl = get_hkl(tid);
-                lang_id = (hkl as u32) & 0xFFFF;
-            }
-        }
-    }
-
-    let mut is_native_mode = false;
+    // 使用 OpenStatus 判定：true=中文, false=英文
+    let mut is_chinese_mode = false;
     if ime_hwnd.0 != 0 {
-        let mode_res = unsafe { SendMessageW(ime_hwnd, WM_IME_CONTROL, IMC_GETCONVERSIONMODE, LPARAM(0)) };
-        let conversion_mode = mode_res.0 as u32;
-        is_native_mode = (conversion_mode & IME_CMODE_NATIVE.0) != 0;
-        
-        println!("[DEBUG] LangID: 0x{:04X}, IME HWND: {:?}, Mode: 0x{:08X} => {}", 
-            lang_id,
-            ime_hwnd, 
-            conversion_mode, 
-            if is_native_mode { "【中文模式】" } else { "【英文模式】" }
+        let res = unsafe { SendMessageW(ime_hwnd, WM_IME_CONTROL, IMC_GETOPENSTATUS, LPARAM(0)) };
+        is_chinese_mode = res.0 != 0;
+        println!("[DEBUG] Target HWND: {:?}, IME Open: {} => {}", 
+            target_hwnd, 
+            is_chinese_mode,
+            if is_chinese_mode { "【中文模式】" } else { "【英文模式】" }
         );
     }
 
@@ -126,24 +101,29 @@ fn send_sequence(text: &str) {
         let mut vk_to_press = VIRTUAL_KEY(0);
         let mut need_shift = false;
 
-        if is_native_mode {
-            if let Some((vk, shift)) = get_punctuation_mapping(c) {
+        if is_chinese_mode {
+            // 分支 B: 中文模式
+            // 只有当字符是【全角中文标点】时，才走物理映射
+            if let Some((vk, shift)) = get_chinese_punctuation_mapping(c) {
                 use_physical_key = true;
                 vk_to_press = vk;
                 need_shift = shift;
             }
+            // 汉字、半角标点、Emoji 等 -> use_physical_key 为 false -> 走 Unicode
+        } else {
+            // 分支 A: 英文模式 -> 全部走 Unicode
+            use_physical_key = false;
         }
 
         if use_physical_key {
             println!("Char '{}' -> Physical", c);
             send_physical_key(vk_to_press, need_shift);
         } else {
-            let mut buf = [0; 2];
-            let encoded_slice = c.encode_utf16(&mut buf);
-            println!("Char '{}' -> Unicode ({:?})", c, encoded_slice);
+            println!("Char '{}' -> Unicode", c);
             send_unicode_char(c);
         }
-        thread::sleep(Duration::from_millis(50));
+        
+        thread::sleep(Duration::from_millis(20));
     }
 }
 
