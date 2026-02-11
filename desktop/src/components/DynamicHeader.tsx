@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { WifiOff, ChevronDown, ChevronUp, Keyboard } from "lucide-react";
+import { WifiOff, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "../lib/utils";
 import { ViewMode } from "../types";
 import { invoke } from "@tauri-apps/api/core";
@@ -25,25 +25,62 @@ export const DynamicHeader = ({
   const isHistory = viewMode === 'history';
   const showExpandButton = viewMode !== 'pairing';
 
-  // 核心拖拽触发器：绑定到整个 Header
   const handleHeaderMouseDown = (e: React.MouseEvent) => {
-    // 1. 只响应左键
+    // 调试日志：确认点击是否触发
+    console.log(">> MouseDown on Header/Overlay", e.button);
+    
     if (e.button !== 0) return;
-
-    // 2. 检查是否点击了交互元素 (防止误触)
-    // 虽然我们在按钮上阻止了冒泡，但多一层检查更安全
     const target = e.target as HTMLElement;
     if (target.closest('button')) return;
+    
+    invoke('start_drag').catch(err => console.error("Drag failed:", err));
+  };
 
-    // 3. 触发 Rust 原生拖拽
-    invoke('start_drag').catch(console.error);
+  const handleHeaderClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('button')) return;
+    if (isCompact) {
+      onToggleExpand();
+    }
   };
 
   return (
     <div
-      className="w-full h-[60px] flex items-center px-4 relative shrink-0 cursor-default"
-      onMouseDown={handleHeaderMouseDown} // <--- 绑定到这里，整个头部均可拖拽
+      className="w-full flex items-center px-4 shrink-0 cursor-default"
+      style={{ 
+        position: 'relative',
+        height: '60px',
+        width: '100%',
+        backgroundColor: 'rgba(255, 255, 255, 0.01)' // 关键：确保父容器能承接住穿透下来的点击
+      }} 
+      onMouseDown={handleHeaderMouseDown}
+      onClick={handleHeaderClick}
     >
+      {/* 视觉提示层 (Overlay) - 永久显示，用于调试定位 */}
+      {isCompact && (
+        <div 
+          style={{
+            position: 'absolute',
+            top: 2, left: 2, right: 2, bottom: 2,
+            zIndex: 50,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'none', // 关键：全息投影模式，点击直接穿透给父级
+            borderRadius: '9999px',
+            backgroundColor: 'rgba(0, 0, 0, 0.4)',
+            backdropFilter: 'blur(1px)',
+          }}
+        >
+           {/* >>> 箭头图标 */}
+           <svg width="24" height="12" viewBox="0 0 40 12" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ transform: 'scale(1.25)', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))', color: 'rgba(255,255,255,0.9)', pointerEvents: 'none' }}>
+             <path d="M4 1L9 6L4 11" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+             <path d="M18 1L23 6L18 11" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+             <path d="M32 1L37 6L32 11" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+           </svg>
+        </div>
+      )}
+
       {/* 状态灯 (左侧) */}
       <div 
         className={cn("flex items-center justify-center w-8 h-8 mr-2 relative", isCompact ? "mr-0" : "mr-2")}
@@ -68,20 +105,20 @@ export const DynamicHeader = ({
         className="flex-1 flex flex-col justify-center overflow-hidden h-full py-1"
       >
         {isCompact ? (
-          /* Compact Mode: 恢复为简约图标，或者留白 */
+          /* Compact Mode: 极简留白 */
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex items-center justify-center h-full w-full pointer-events-none" // 内容不拦截点击，让点击穿透到 Header
+            className="flex items-center justify-center h-full w-full pointer-events-none"
           >
-             <Keyboard size={20} className="text-white/50" />
+             {/* 空置 */}
           </motion.div>
         ) : (
           /* Expanded/History Mode: 显示标题和状态 */
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col justify-center h-full pointer-events-none" // 内容不拦截点击
+            className="flex flex-col justify-center h-full pointer-events-none"
           >
             <h1 className="text-sm font-bold text-gray-100 tracking-wide flex items-center gap-2">
               Is Typing...
@@ -94,22 +131,22 @@ export const DynamicHeader = ({
         )}
       </div>
 
-      {/* 右侧交互区 */}
+      {/* 右侧交互区: 仅在非 Compact 模式下渲染按钮 */}
       <div className="flex items-center justify-center w-8 h-8 relative z-20">
-        {showExpandButton ? (
+        {!isCompact && showExpandButton ? (
           <button 
             onClick={(e) => {
-              e.stopPropagation(); // 关键：阻止冒泡，防止点击按钮时触发拖拽
+              e.stopPropagation();
               onToggleExpand();
             }}
-            onMouseDown={(e) => e.stopPropagation()} // 额外保险：防止 MouseDown 冒泡
-            className="text-gray-400 hover:text-white hover:bg-white/10 p-1.5 rounded-full transition-colors active:scale-90 cursor-pointer"
+            onMouseDown={(e) => e.stopPropagation()}
+            className="text-white/40 hover:text-white transition-colors active:scale-90 cursor-pointer"
           >
-            {isHistory ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            {isHistory ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
           </button>
         ) : (
           <div className="text-gray-600/50 pointer-events-none">
-            <WifiOff size={16} />
+            {!isCompact && <WifiOff size={16} />}
           </div>
         )}
       </div>
