@@ -52,25 +52,25 @@ export const DynamicHeader = ({
             justifyContent: 'center',
             pointerEvents: 'none', 
             borderRadius: '9999px',
-            // 为不同状态分配明显不同的颜色
+            // 恢复靛蓝色背景作为正式 Hover 反馈
             backgroundColor: 
               overlayState === 'DRAGGING' 
-                ? 'rgba(0, 0, 0, 0.85)'  // 拖拽中：深黑，强调控制感
-                : 'rgba(30, 64, 175, 0.65)', // 悬浮中：靛蓝，提示可交互
+                ? 'rgba(0, 0, 0, 0.85)'  // 拖拽中：深黑
+                : 'rgba(30, 64, 175, 0.65)', // 悬浮中：靛蓝 (正式功能)
             backdropFilter: 'blur(2px)',
             opacity: overlayState === 'IDLE' ? 0 : 1,
-            transition: overlayState === 'HOVER' ? 'opacity 0.3s ease 0.2s' : 'opacity 0.1s ease',
+            transition: overlayState === 'HOVER' ? 'opacity 0.3s ease 0.2s' : 'opacity 0.15s ease',
           }}
         >
+           {/* 中心图标 */}
            {overlayState === 'DRAGGING' ? (
-             /* 状态：拖拽中 (十字箭头 - 向外扩张版) */
              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-               <polyline points="9 5 12 2 15 5" />      {/* 上箭头 */}
-               <polyline points="9 19 12 22 15 19" />   {/* 下箭头 */}
-               <polyline points="19 9 22 12 19 15" />   {/* 右箭头 */}
-               <polyline points="5 9 2 12 5 15" />      {/* 左箭头 */}
-               <line x1="12" y1="2" x2="12" y2="22" />  {/* 垂直线 */}
-               <line x1="2" y1="12" x2="22" y2="12" />  {/* 水平线段 */}
+               <polyline points="9 5 12 2 15 5" />
+               <polyline points="9 19 12 22 15 19" />
+               <polyline points="19 9 22 12 19 15" />
+               <polyline points="5 9 2 12 5 15" />
+               <line x1="12" y1="2" x2="12" y2="22" />
+               <line x1="2" y1="12" x2="22" y2="12" />
              </svg>
            ) : (
              <svg width="24" height="12" viewBox="0 0 40 12" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ transform: 'scale(1.25)', color: 'white' }}>
@@ -80,11 +80,26 @@ export const DynamicHeader = ({
              </svg>
            )}
 
+           {/* 恢复左侧 Debug 标签 (仅开发模式) */}
            {isDev && (
              <span style={{ position: 'absolute', left: '40px', fontSize: '8px', color: 'white', opacity: 0.8, fontWeight: 'bold' }}>
                {overlayState}
              </span>
            )}
+
+           {/* 右侧引导文字 */}
+           <span style={{ 
+             position: 'absolute', 
+             right: '40px', 
+             fontSize: '8px', 
+             color: 'white', 
+             fontWeight: 'bold',
+             letterSpacing: '0.05em',
+             transition: 'opacity 0.2s ease',
+             opacity: overlayState === 'DRAGGING' ? 0 : 0.7
+           }}>
+             HISTORY
+           </span>
         </div>
       )}
 
