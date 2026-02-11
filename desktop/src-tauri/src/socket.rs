@@ -12,15 +12,19 @@ pub fn setup_socket(app_handle: AppHandle, session_state: Arc<std::sync::Mutex<c
     let app_handle_for_session = app_handle.clone();
     let session_state_clone = session_state.clone();
 
-    // 生成全局唯一 Room ID (字母+数字，16位)
-    let charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    let mut rng = rand::thread_rng();
-    let room_id: String = (0..16)
-        .map(|_| {
-            let idx = rng.gen_range(0..charset.len());
-            charset.chars().nth(idx).unwrap()
-        })
-        .collect();
+    // 生成 Room ID
+    let room_id: String = if cfg!(debug_assertions) {
+        "DEBUG_SESSION_ID".to_string()
+    } else {
+        let charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        let mut rng = rand::thread_rng();
+        (0..16)
+            .map(|_| {
+                let idx = rng.gen_range(0..charset.len());
+                charset.chars().nth(idx).unwrap()
+            })
+            .collect()
+    };
     
     let room_id_for_registration = room_id.clone();
 

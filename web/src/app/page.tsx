@@ -10,12 +10,24 @@ export default function Home() {
   const [inputRoomId, setInputRoomId] = useState("");
   const socketRef = useRef<Socket | null>(null);
 
+  // 判断是否为开发/局域网环境
+  const isLocalEnv = (hostname: string) => {
+    return (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname.startsWith("192.168.") ||
+      hostname.startsWith("10.") ||
+      hostname.startsWith("172.")
+    );
+  };
+
   // 获取后端地址
   const getSocketUrl = () => {
     if (typeof window !== "undefined") {
       const hostname = window.location.hostname;
-      if (hostname === "localhost" || hostname === "127.0.0.1") {
-        return "http://localhost:3000";
+      if (isLocalEnv(hostname)) {
+        // 局域网测试时，手机需要连接 PC 的实际 IP
+        return `http://${hostname}:3000`;
       }
     }
     return "http://istyping.app:3000";
@@ -33,6 +45,11 @@ export default function Home() {
     const params = new URLSearchParams(window.location.search);
     const rId = params.get("room") || "";
     
+    // 如果是内网/本地环境且没有扫码，自动填入 000000
+    if (!rId && typeof window !== "undefined" && isLocalEnv(window.location.hostname)) {
+      setInputRoomId("000000");
+    }
+
     // 1. 初始化 Socket 连接
     const socket = io(getSocketUrl(), {
       transports: ["websocket"],
