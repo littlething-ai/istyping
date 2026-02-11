@@ -12,16 +12,27 @@ body {
 
 @layer utilities {
   .glass {
-    /* 背景颜色降低透明度，配合 saturate 提升通透感 */
-    @apply bg-gray-900/40 backdrop-blur-2xl saturate-150;
-    
-    /* 渐变边框效果 */
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    background-clip: padding-box;
-    
-    /* 柔和的弥散阴影 */
+    /* 1. 基础背景调整: 加深颜色以补偿原生模糊的缺失 */
+    background-color: rgba(10, 10, 15, 0.75);
+
+    /* 2. 叠加噪点 (Noise Texture): 增加磨砂颗粒感，消除塑料感 */
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E"), 
+                      linear-gradient(to bottom, rgba(255,255,255,0.03), rgba(255,255,255,0));
+    background-blend-mode: overlay;
+
+    /* 3. 强化光感与实体感 */
+    /* top-highlight: 模拟顶部锐利反光 */
+    /* inner-shadow: 增加内部深邃感 */
     box-shadow: 
-      inset 0 1px 1px 0 rgba(255, 255, 255, 0.1);
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.15), 
+      inset 0 0 20px 0 rgba(0, 0, 0, 0.5);
+
+    /* 4. 边缘处理 */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    
+    /* 5. 辅助属性 */
+    @apply backdrop-blur-2xl saturate-150;
+    background-clip: padding-box;
   }
   
   .glass-panel {
