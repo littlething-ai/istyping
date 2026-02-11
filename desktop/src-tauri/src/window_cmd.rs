@@ -11,3 +11,8 @@ pub fn set_window_size(app_handle: AppHandle, width: f64, height: f64) {
 pub fn start_drag(window: Window) {
     let _ = window.start_dragging();
 }
+
+#[tauri::command]
+pub fn js_log(message: String) {
+    println!("[JS-UI] {}", message);
+}
