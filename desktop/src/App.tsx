@@ -1,20 +1,49 @@
 import { useState, useEffect } from 'react';
 import QRCode from 'qrcode.react';
 import { listen } from '@tauri-apps/api/event';
+import { invoke } from '@tauri-apps/api/core';
 
 type DebugLog = {
   type: 'text' | 'control';
   content: string;
 };
 
+type SessionInfo = {
+  roomId: string;
+  roomNumber: string;
+};
+
 function App() {
   const [status, setStatus] = useState<'standby' | 'ready' | 'typing'>('standby');
-  const [sessionId, setSessionId] = useState<string>('demo-session-id');
+  const [session, setSession] = useState<SessionInfo>({ roomId: '', roomNumber: '------' });
   const [lastLog, setLastLog] = useState<DebugLog | null>(null);
 
   useEffect(() => {
+    // 1. 主动拉取初始信息 (解决时序竞争)
+    invoke<SessionInfo>('get_session_info')
+      .then((data) => {
+        console.log('Fetched initial session info:', data);
+        if (data.roomId) setSession(data);
+      })
+      .catch(console.error);
+
+    // 2. 监听从 Rust 发来的 Session Info (后续更新)
+    const unlistenSession = listen<SessionInfo>('session-info', (event) => {
+      console.log('Frontend received session-info:', event.payload);
+      if (event.payload) {
+        setSession(event.payload);
+      }
+    });
+
+    // 定期拉取保底 (每 5 秒一次，防止任何意外)
+    const timer = setInterval(() => {
+      invoke<SessionInfo>('get_session_info').then(data => {
+        if (data.roomId) setSession(data);
+      });
+    }, 5000);
+
     // 监听 Rust 发来的调试日志
-    const unlisten = listen<DebugLog>('debug-log', (event) => {
+    const unlistenLog = listen<DebugLog>('debug-log', (event) => {
       console.log('Received from Rust:', event.payload);
       setLastLog(event.payload);
       
@@ -27,7 +56,9 @@ function App() {
     setStatus('ready');
 
     return () => {
-      unlisten.then(f => f());
+      unlistenSession.then(f => f());
+      unlistenLog.then(f => f());
+      clearInterval(timer);
     };
   }, []);
 
@@ -53,9 +84,20 @@ function App() {
         </div>
       )}
 
-      {/* 二维码 (默认显示，后续可以做成点击展开) */}
-      <div className="bg-white p-1 rounded opacity-80 hover:opacity-100 transition-opacity">
-        <QRCode value={`https://is_typing.com/connect/${sessionId}`} size={64} />
+      {/* 二维码与数字 ID */}
+      <div className="flex flex-col items-center gap-3 mt-2">
+        <div className="bg-white p-1.5 rounded-lg shadow-lg opacity-90 hover:opacity-100 transition-opacity cursor-pointer">
+          <QRCode value={`https://is-typing.vercel.app/?room=${session.roomId}`} size={80} />
+        </div>
+        <div className="flex flex-col items-center">
+          <div className="text-[10px] font-mono text-gray-500 uppercase tracking-tighter">Room Number</div>
+          <div className="text-2xl font-black font-mono text-blue-400 tracking-widest -mt-1">
+            {session.roomNumber}
+          </div>
+          <div className="text-[9px] font-mono text-gray-600 mt-1 select-all opacity-50 hover:opacity-100 transition-opacity">
+            ID: {session.roomId || 'Connecting...'}
+          </div>
+        </div>
       </div>
     </div>
   );
