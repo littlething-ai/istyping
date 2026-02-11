@@ -2,8 +2,7 @@ import { motion } from "framer-motion";
 import { WifiOff, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "../lib/utils";
 import { ViewMode } from "../types";
-import { invoke } from "@tauri-apps/api/core";
-import { useState, useEffect } from "react";
+import { useHeaderStateMachine } from "../hooks/useHeaderStateMachine";
 
 interface DynamicHeaderProps {
   status: "standby" | "ready" | "typing";
@@ -13,11 +12,6 @@ interface DynamicHeaderProps {
   onToggleExpand: () => void;
   recentText?: string;
 }
-
-// 终端日志转发工具
-const terminalLog = (msg: string) => {
-  invoke('js_log', { message: msg }).catch(() => {});
-};
 
 export const DynamicHeader = ({
   status,
@@ -30,38 +24,10 @@ export const DynamicHeader = ({
   const isCompact = viewMode === 'compact';
   const isHistory = viewMode === 'history';
   const showExpandButton = viewMode !== 'pairing';
-
   const isDev = import.meta.env.DEV;
-  const [isMouseOver, setIsMouseOver] = useState(false);
 
-  // 定时发送日志，验证桥接是否成功
-  useEffect(() => {
-    if (!isDev) return;
-
-    const timer = setInterval(() => {
-      terminalLog(`Heartbeat - Hover: ${isMouseOver}, Mode: ${viewMode}`);
-    }, 2000); // 每 2 秒发一次，避免刷屏太快
-
-    return () => clearInterval(timer);
-  }, [isMouseOver, viewMode, isDev]);
-
-  const handleHeaderMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0) return;
-    const target = e.target as HTMLElement;
-    if (target.closest('button')) return;
-    
-    terminalLog(">> User started dragging");
-    invoke('start_drag').catch(console.error);
-  };
-
-  const handleHeaderClick = (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    if (target.closest('button')) return;
-    if (isCompact) {
-      terminalLog(">> Compact Island Clicked -> Expanding");
-      onToggleExpand();
-    }
-  };
+  // 使用独立的状态机 Hook
+  const { overlayState, handlers } = useHeaderStateMachine(viewMode, onToggleExpand);
 
   return (
     <div
@@ -72,12 +38,9 @@ export const DynamicHeader = ({
         width: '100%',
         backgroundColor: 'rgba(255, 255, 255, 0.01)', 
       }} 
-      onMouseDown={handleHeaderMouseDown}
-      onClick={handleHeaderClick}
-      onMouseEnter={() => setIsMouseOver(true)}
-      onMouseLeave={() => setIsMouseOver(false)}
+      {...handlers}
     >
-      {/* 视觉提示层 (Overlay) */}
+      {/* --- 视觉提示层 (Overlay) --- */}
       {isCompact && (
         <div 
           style={{
@@ -89,26 +52,38 @@ export const DynamicHeader = ({
             justifyContent: 'center',
             pointerEvents: 'none', 
             borderRadius: '9999px',
-            backgroundColor: (isDev && isMouseOver) ? 'rgba(59, 130, 246, 0.5)' : 'rgba(0, 0, 0, 0.4)',
-            backdropFilter: 'blur(1px)',
-            transition: 'background-color 0.2s ease'
+            backgroundColor: overlayState === 'DRAGGING' ? 'rgba(0, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.6)',
+            backdropFilter: 'blur(2px)',
+            opacity: overlayState === 'IDLE' ? 0 : 1,
+            transition: overlayState === 'HOVER' ? 'opacity 0.3s ease 0.2s' : 'opacity 0.1s ease',
           }}
         >
-           <svg width="24" height="12" viewBox="0 0 40 12" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ transform: 'scale(1.25)', color: 'white', pointerEvents: 'none' }}>
-             <path d="M4 1L9 6L4 11" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-             <path d="M18 1L23 6L18 11" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-             <path d="M32 1L37 6L32 11" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-           </svg>
+           {overlayState === 'DRAGGING' ? (
+             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+               <polyline points="9 22 12 19 15 22" />
+               <polyline points="15 2 12 5 9 2" />
+               <polyline points="22 15 19 12 22 9" />
+               <polyline points="2 9 5 12 2 15" />
+               <line x1="12" y1="19" x2="12" y2="5" />
+               <line x1="19" y1="12" x2="5" y2="12" />
+             </svg>
+           ) : (
+             <svg width="24" height="12" viewBox="0 0 40 12" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ transform: 'scale(1.25)', color: 'white' }}>
+               <path d="M4 1L9 6L4 11" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+               <path d="M18 1L23 6L18 11" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+               <path d="M32 1L37 6L32 11" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+             </svg>
+           )}
 
            {isDev && (
              <span style={{ position: 'absolute', left: '40px', fontSize: '8px', color: 'white', opacity: 0.8, fontWeight: 'bold' }}>
-               {isMouseOver ? "OVER" : "OUT"}
+               {overlayState}
              </span>
            )}
         </div>
       )}
 
-      {/* 状态灯 (左侧) */}
+      {/* --- 状态灯 (左侧) --- */}
       <div className={cn("flex items-center justify-center w-8 h-8 mr-2 relative", isCompact ? "mr-0" : "mr-2")}>
         <motion.div
           className={cn(
@@ -125,7 +100,7 @@ export const DynamicHeader = ({
         />
       </div>
 
-      {/* 中间内容区 */}
+      {/* --- 中间内容区 --- */}
       <div className="flex-1 flex flex-col justify-center overflow-hidden h-full py-1">
         {!isCompact && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col justify-center h-full pointer-events-none">
@@ -140,7 +115,7 @@ export const DynamicHeader = ({
         )}
       </div>
 
-      {/* 右侧交互区 */}
+      {/* --- 右侧交互区 --- */}
       <div className="flex items-center justify-center w-8 h-8 relative z-20">
         {!isCompact && showExpandButton && (
           <button 
