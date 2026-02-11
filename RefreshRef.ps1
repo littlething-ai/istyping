@@ -99,4 +99,4 @@ function New-HardLinkMirror {
 }
 
 
-New-HardLinkMirror -SourcePath "..\is_typing_memory" -DestPath ".\ref\memory"
+New-HardLinkMirror -SourcePath "..\istyping_memory" -DestPath ".\ref\memory"
