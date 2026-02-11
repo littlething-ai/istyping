@@ -13,10 +13,14 @@
     "windows": [
       {
         "title": "Is Typing",
-        "width": 800,
-        "height": 600,
-        "resizable": true,
-        "fullscreen": false
+        "width": 300,
+        "height": 480,
+        "resizable": false,
+        "fullscreen": false,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "shadow": false
       }
     ],
     "security": {
