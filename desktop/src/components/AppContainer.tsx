@@ -15,11 +15,7 @@ export const AppContainer = ({ children, className, viewMode, status }: AppConta
   // 定义三种模式的尺寸
   const variants = {
     pairing: { width: 300, height: 480, borderRadius: 24 },
-    compact: { 
-      width: status === 'typing' ? 240 : 200, 
-      height: status === 'typing' ? 64 : 60, 
-      borderRadius: 32 
-    },
+    compact: { width: 200, height: 60, borderRadius: 30 }, 
     history: { width: 320, height: 500, borderRadius: 24 }
   };
 
