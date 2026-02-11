@@ -29,25 +29,43 @@ pub fn setup_socket(app_handle: AppHandle, session_state: Arc<std::sync::Mutex<c
     let room_id_for_registration = room_id.clone();
 
     let on_text = move |payload: Payload, _socket: RawClient| {
+        println!("[DEBUG] on_text received payload: {:?}", payload);
         let text_opt: Option<String> = match payload {
             Payload::Text(args) => args.get(0).and_then(|v| {
                 if v.is_string() { v.as_str().map(|s| s.to_string()) }
                 else { v.get("text").and_then(|t| t.as_str()).map(|s| s.to_string()) }
             }),
+            Payload::String(s) => {
+                if let Ok(v) = serde_json::from_str::<serde_json::Value>(&s) {
+                    v.get("text").and_then(|t| t.as_str()).map(|s| s.to_string())
+                } else {
+                    Some(s)
+                }
+            },
             _ => None
         };
         if let Some(text) = text_opt {
+             println!("[DEBUG] Processing text: {}", text);
              let _ = app_handle_for_text.emit("debug-log", json!({ "type": "text", "content": text }));
              send_sequence(&text);
         }
     };
 
     let on_control = move |payload: Payload, _socket: RawClient| {
+         println!("[DEBUG] on_control received payload: {:?}", payload);
          let action_opt: Option<String> = match payload {
              Payload::Text(args) => args.get(0).and_then(|v| v.get("action").and_then(|a| a.as_str()).map(|s| s.to_string())),
+             Payload::String(s) => {
+                if let Ok(v) = serde_json::from_str::<serde_json::Value>(&s) {
+                    v.get("action").and_then(|a| a.as_str()).map(|s| s.to_string())
+                } else {
+                    None
+                }
+             },
              _ => None
          };
          if let Some(action) = action_opt {
+             println!("[DEBUG] Processing control: {}", action);
              let _ = app_handle_for_control.emit("debug-log", json!({ "type": "control", "content": action }));
              if let Ok(mut enigo) = Enigo::new(&Settings::default()) {
                  match action.as_str() {

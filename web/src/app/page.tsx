@@ -35,9 +35,10 @@ export default function Home() {
 
   const joinRoom = (id: string) => {
     if (!id || !socketRef.current) return;
-    console.log("Joining room:", id);
+    console.log("Attempting to join room with ID/Number:", id);
     socketRef.current.emit("join_room", id);
     setInputRoomId(id);
+    // 注意：这里不再立即 setRoomId(id)，而是等服务器返回 joined_room_info
   };
 
   useEffect(() => {
@@ -60,14 +61,19 @@ export default function Home() {
     socket.on("connect", () => {
       console.log("Connected to server:", socket.id);
       setStatus("connected");
+      
       if (rId) {
         joinRoom(rId);
+      } else if (isLocalEnv(window.location.hostname)) {
+        // 开发模式专享：内网环境下自动加入 000000
+        console.log("Debug mode: Auto-joining room 000000");
+        joinRoom("000000");
       }
     });
 
     socket.on("joined_room_info", (data: { roomId: string }) => {
-      console.log("Joined room successfully:", data.roomId);
-      setRoomId(data.roomId);
+      console.log("Joined room successfully, real ID:", data.roomId);
+      setRoomId(data.roomId); // 核心：把本地的 000000 替换为 DEBUG_SESSION_ID
     });
 
     socket.on("error_message", (msg: string) => {
