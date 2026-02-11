@@ -3,15 +3,23 @@
 import { useEffect, useState, useRef } from "react";
 import { io, Socket } from "socket.io-client";
 
-// TODO: 部署时改为真实 VPS 地址
-const SOCKET_URL = "http://localhost:3000"; 
-
 export default function Home() {
   const [status, setStatus] = useState<"disconnected" | "connected">("disconnected");
   const [text, setText] = useState("");
   const [roomId, setRoomId] = useState("");
   const [inputRoomId, setInputRoomId] = useState("");
   const socketRef = useRef<Socket | null>(null);
+
+  // 获取后端地址
+  const getSocketUrl = () => {
+    if (typeof window !== "undefined") {
+      const hostname = window.location.hostname;
+      if (hostname === "localhost" || hostname === "127.0.0.1") {
+        return "http://localhost:3000";
+      }
+    }
+    return "http://istyping.app:3000";
+  };
 
   const joinRoom = (id: string) => {
     if (!id || !socketRef.current) return;
@@ -26,7 +34,7 @@ export default function Home() {
     const rId = params.get("room") || "";
     
     // 1. 初始化 Socket 连接
-    const socket = io(SOCKET_URL, {
+    const socket = io(getSocketUrl(), {
       transports: ["websocket"],
       reconnectionAttempts: 5,
     });

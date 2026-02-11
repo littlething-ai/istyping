@@ -93,7 +93,13 @@ pub fn setup_socket(app_handle: AppHandle, session_state: Arc<std::sync::Mutex<c
         eprintln!("[ERROR] Socket Error: {:?}", payload);
     };
 
-    ClientBuilder::new("http://localhost:3000")
+    let socket_url = if cfg!(debug_assertions) {
+        "http://localhost:3000"
+    } else {
+        "http://istyping.app:3000"
+    };
+
+    ClientBuilder::new(socket_url)
         .namespace("/")
         .on("open", on_open)
         .on("error", on_error)
