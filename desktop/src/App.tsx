@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
 import { AnimatePresence } from 'framer-motion';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 
 import { AppContainer } from './components/AppContainer';
 import { DynamicHeader } from './components/DynamicHeader';
@@ -24,7 +25,7 @@ function App() {
     let height = 480;
 
     if (viewMode === 'compact') {
-      width = 200; // 更新为 200
+      width = 200; 
       height = 60;
     } else if (viewMode === 'history') {
       width = 320;
@@ -35,7 +36,12 @@ function App() {
       height = 480;
     }
 
-    invoke('set_window_size', { width, height }).catch(console.error);
+    // 为阴影和扩展动画留出空间
+    const PADDING = 80; 
+    invoke('set_window_size', { 
+      width: width + PADDING, 
+      height: height + PADDING 
+    }).catch(console.error);
   }, [viewMode]);
 
   // 监听连接状态变化，自动切换模式
@@ -91,8 +97,10 @@ function App() {
   }, []);
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-transparent p-4">
-      <AppContainer viewMode={viewMode}>
+    <div 
+      className="flex items-center justify-center w-screen h-screen bg-transparent overflow-hidden select-none"
+    >
+      <AppContainer viewMode={viewMode} status={status}>
         {/* 常驻头部 */}
         <DynamicHeader 
           status={status}

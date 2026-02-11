@@ -12,14 +12,17 @@ body {
 
 @layer utilities {
   .glass {
-    /* 背景颜色降低透明度，让底层的原生 Blur/Acrylic 透出来 */
-    @apply bg-gray-900/40;
+    /* 背景颜色降低透明度，配合 saturate 提升通透感 */
+    @apply bg-gray-900/40 backdrop-blur-2xl saturate-150;
     
-    /* 极细的 1px 亮色描边 (RGBA 255,255,255,0.1) */
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    /* 渐变边框效果 */
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background-clip: padding-box;
     
-    /* 柔和的弥散阴影，营造悬浮感 (因为我们关掉了原生阴影) */
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
+    /* 柔和的弥散阴影 */
+    box-shadow: 
+      0 10px 40px -10px rgba(0, 0, 0, 0.5),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.1);
   }
   
   .glass-panel {

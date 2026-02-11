@@ -6,7 +6,7 @@ mod window_cmd; // 新增模块
 use std::sync::{Arc, Mutex};
 use session::{SessionInfo, SessionState, get_session_info};
 use socket::setup_socket;
-use window_cmd::set_window_size; // 引入命令
+use window_cmd::{set_window_size, start_drag}; // 引入新命令
 use tauri::Manager;
 use window_vibrancy::apply_blur;
 
@@ -21,7 +21,7 @@ pub fn run() {
   tauri::Builder::default()
     .manage(session_state)
     .plugin(tauri_plugin_shell::init())
-    .invoke_handler(tauri::generate_handler![get_session_info, set_window_size]) // 注册命令
+    .invoke_handler(tauri::generate_handler![get_session_info, set_window_size, start_drag]) // 注册 start_drag
     .setup(move |app| {
         if cfg!(debug_assertions) {
             app.handle().plugin(
