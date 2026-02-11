@@ -52,7 +52,11 @@ export const DynamicHeader = ({
             justifyContent: 'center',
             pointerEvents: 'none', 
             borderRadius: '9999px',
-            backgroundColor: overlayState === 'DRAGGING' ? 'rgba(0, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.6)',
+            // 为不同状态分配明显不同的颜色
+            backgroundColor: 
+              overlayState === 'DRAGGING' 
+                ? 'rgba(0, 0, 0, 0.85)'  // 拖拽中：深黑，强调控制感
+                : 'rgba(30, 64, 175, 0.65)', // 悬浮中：靛蓝，提示可交互
             backdropFilter: 'blur(2px)',
             opacity: overlayState === 'IDLE' ? 0 : 1,
             transition: overlayState === 'HOVER' ? 'opacity 0.3s ease 0.2s' : 'opacity 0.1s ease',

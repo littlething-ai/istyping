@@ -12,6 +12,7 @@ export const useHeaderStateMachine = (viewMode: ViewMode, onToggleExpand: () => 
   const isDev = import.meta.env.DEV;
   const [overlayState, setOverlayState] = useState<HeaderOverlayState>('IDLE');
   const isMouseActuallyInside = useRef(false);
+  const dragStartTime = useRef(0);
 
   // Debug 心跳日志
   useEffect(() => {
@@ -21,6 +22,50 @@ export const useHeaderStateMachine = (viewMode: ViewMode, onToggleExpand: () => 
     }, 1000);
     return () => clearInterval(timer);
   }, [overlayState, viewMode, isDev]);
+
+  // 核心检测逻辑
+  useEffect(() => {
+    if (overlayState === 'DRAGGING') {
+      
+      const handleGlobalMouseUp = (e: MouseEvent) => {
+        terminalLog(`>> Detect: mouseup (btn ${e.button})`);
+        exitDragging();
+      };
+
+      const handleGlobalMouseMove = () => {
+        // 增加更长一点的宽限期（200ms），确保原生拖拽已经稳固启动
+        if (Date.now() - dragStartTime.current > 200) {
+          exitDragging();
+        }
+      };
+
+      const handleBlur = () => {
+        // 关键修复：忽略拖拽开始前 500ms 内的失焦事件
+        // 因为 start_drag 会导致窗口瞬间失去焦点给 OS
+        const duration = Date.now() - dragStartTime.current;
+        if (duration > 500) {
+          terminalLog(`>> Detect: real blur (${duration}ms) -> Exit`);
+          exitDragging();
+        } else {
+          // terminalLog(`>> Ignored: system-induced blur during start_drag (${duration}ms)`);
+        }
+      };
+
+      const exitDragging = () => {
+        setOverlayState(isMouseActuallyInside.current ? 'HOVER' : 'IDLE');
+      };
+
+      window.addEventListener('mouseup', handleGlobalMouseUp);
+      window.addEventListener('mousemove', handleGlobalMouseMove);
+      window.addEventListener('blur', handleBlur);
+      
+      return () => {
+        window.removeEventListener('mouseup', handleGlobalMouseUp);
+        window.removeEventListener('mousemove', handleGlobalMouseMove);
+        window.removeEventListener('blur', handleBlur);
+      };
+    }
+  }, [overlayState]);
 
   const handleMouseEnter = () => {
     isMouseActuallyInside.current = true;
@@ -41,28 +86,24 @@ export const useHeaderStateMachine = (viewMode: ViewMode, onToggleExpand: () => 
     const target = e.target as HTMLElement;
     if (target.closest('button')) return;
 
+    dragStartTime.current = Date.now();
     setOverlayState('DRAGGING');
-    terminalLog(">> Transition: -> DRAGGING");
+    terminalLog(">> Action: mousedown -> DRAGGING");
 
-    // 给予微小缓冲，然后执行原生拖拽
-    setTimeout(() => {
-      invoke('start_drag')
-        .then(() => {
-          terminalLog(">> Native Drag Resolve");
-          // 逻辑回归：检查鼠标当前真实位置
-          setOverlayState(isMouseActuallyInside.current ? 'HOVER' : 'IDLE');
-        })
-        .catch((err) => {
-          console.error(err);
-          setOverlayState('IDLE');
-        });
-    }, 30);
+    // 执行原生拖拽
+    invoke('start_drag').catch((err) => {
+      terminalLog(`!! start_drag ERROR: ${err}`);
+      setOverlayState('IDLE');
+    });
   };
 
   const handleClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
     if (target.closest('button')) return;
-    if (viewMode === 'compact') {
+    
+    const duration = Date.now() - dragStartTime.current;
+    if (viewMode === 'compact' && duration < 300) {
+      terminalLog(`>> Click -> Expanding`);
       onToggleExpand();
     }
   };
