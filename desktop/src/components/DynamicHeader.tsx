@@ -63,13 +63,14 @@ export const DynamicHeader = ({
           }}
         >
            {overlayState === 'DRAGGING' ? (
+             /* 状态：拖拽中 (十字箭头 - 向外扩张版) */
              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-               <polyline points="9 22 12 19 15 22" />
-               <polyline points="15 2 12 5 9 2" />
-               <polyline points="22 15 19 12 22 9" />
-               <polyline points="2 9 5 12 2 15" />
-               <line x1="12" y1="19" x2="12" y2="5" />
-               <line x1="19" y1="12" x2="5" y2="12" />
+               <polyline points="9 5 12 2 15 5" />      {/* 上箭头 */}
+               <polyline points="9 19 12 22 15 19" />   {/* 下箭头 */}
+               <polyline points="19 9 22 12 19 15" />   {/* 右箭头 */}
+               <polyline points="5 9 2 12 5 15" />      {/* 左箭头 */}
+               <line x1="12" y1="2" x2="12" y2="22" />  {/* 垂直线 */}
+               <line x1="2" y1="12" x2="22" y2="12" />  {/* 水平线段 */}
              </svg>
            ) : (
              <svg width="24" height="12" viewBox="0 0 40 12" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ transform: 'scale(1.25)', color: 'white' }}>
