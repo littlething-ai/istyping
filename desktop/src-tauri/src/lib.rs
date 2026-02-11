@@ -8,7 +8,7 @@ use session::{SessionInfo, SessionState, get_session_info};
 use socket::setup_socket;
 use window_cmd::{set_window_size, start_drag}; // 引入新命令
 use tauri::Manager;
-use window_vibrancy::apply_blur;
+// 移除了未使用到的 window_vibrancy 引用
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -33,9 +33,8 @@ pub fn run() {
 
         let window = app.get_webview_window("main").unwrap();
 
-        // 开启 Windows 原生模糊效果 (Acrylic/Blur)
-        #[cfg(target_os = "windows")]
-        let _ = apply_blur(&window, Some((18, 18, 18, 125))); // 深灰色背景，半透明
+        // 移除原生模糊效果，因为它会强制产生一个不符合圆角 UI 的矩形背景框
+        // 我们改为完全依赖前端的 glass 效果和 transparent: true 配置
 
         let app_handle = app.handle().clone();
         std::thread::spawn(move || {
