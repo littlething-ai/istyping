@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { cn } from "../lib/utils";
-import React, { ReactNode } from "react";
+import { ReactNode } from "react";
 import { ViewMode } from "../types";
 // Removed direct window import as it's handled in App.tsx
 
@@ -11,7 +11,7 @@ interface AppContainerProps {
   status?: "standby" | "ready" | "typing";
 }
 
-export const AppContainer = ({ children, className, viewMode, status }: AppContainerProps) => {
+export const AppContainer = ({ children, className, viewMode }: AppContainerProps) => {
   // 定义三种模式的尺寸
   const variants = {
     pairing: { width: 300, height: 480, borderRadius: 24 },

@@ -12,15 +12,39 @@
   "app": {
     "windows": [
       {
-        "title": "Is Typing",
-        "width": 300,
-        "height": 480,
+        "label": "main",
+        "title": "Is Typing - Island",
+        "width": 200,
+        "height": 60,
         "resizable": false,
         "fullscreen": false,
         "decorations": false,
         "transparent": true,
         "alwaysOnTop": true,
         "shadow": false
+      },
+      {
+        "label": "pairing",
+        "title": "Is Typing - Pairing",
+        "width": 350,
+        "height": 550,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": true,
+        "transparent": false,
+        "alwaysOnTop": true,
+        "visible": false
+      },
+      {
+        "label": "settings",
+        "title": "Is Typing - Settings",
+        "width": 400,
+        "height": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": true,
+        "transparent": false,
+        "visible": false
       }
     ],
     "security": {

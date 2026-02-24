@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { WifiOff, ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "../lib/utils";
 import { ViewMode } from "../types";
 import { useHeaderStateMachine } from "../hooks/useHeaderStateMachine";
@@ -15,11 +15,8 @@ interface DynamicHeaderProps {
 
 export const DynamicHeader = ({
   status,
-  roomId,
-  roomNumber,
   viewMode,
   onToggleExpand,
-  recentText
 }: DynamicHeaderProps) => {
   const isCompact = viewMode === 'compact';
   const isHistory = viewMode === 'history';
