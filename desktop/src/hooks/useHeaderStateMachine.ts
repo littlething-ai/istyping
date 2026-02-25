@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { ViewMode } from "../types";
 
 export type HeaderOverlayState = 'IDLE' | 'HOVER' | 'DRAGGING';
 
@@ -8,7 +7,7 @@ const terminalLog = (msg: string) => {
   invoke('js_log', { message: msg }).catch(() => {});
 };
 
-export const useHeaderStateMachine = (viewMode: ViewMode, onToggleExpand: () => void) => {
+export const useHeaderStateMachine = (onAction: () => void) => {
   const isDev = import.meta.env.DEV;
   const [overlayState, setOverlayState] = useState<HeaderOverlayState>('IDLE');
   const isMouseActuallyInside = useRef(false);
@@ -18,10 +17,10 @@ export const useHeaderStateMachine = (viewMode: ViewMode, onToggleExpand: () => 
   useEffect(() => {
     if (!isDev) return;
     const timer = setInterval(() => {
-      terminalLog(`[STATE-MACHINE] Mode: ${viewMode}, Overlay: ${overlayState}`);
+      terminalLog(`[STATE-MACHINE] Overlay: ${overlayState}`);
     }, 1000);
     return () => clearInterval(timer);
-  }, [overlayState, viewMode, isDev]);
+  }, [overlayState, isDev]);
 
   // 核心检测逻辑
   useEffect(() => {
@@ -33,21 +32,16 @@ export const useHeaderStateMachine = (viewMode: ViewMode, onToggleExpand: () => 
       };
 
       const handleGlobalMouseMove = () => {
-        // 增加更长一点的宽限期（200ms），确保原生拖拽已经稳固启动
         if (Date.now() - dragStartTime.current > 200) {
           exitDragging();
         }
       };
 
       const handleBlur = () => {
-        // 关键修复：忽略拖拽开始前 500ms 内的失焦事件
-        // 因为 start_drag 会导致窗口瞬间失去焦点给 OS
         const duration = Date.now() - dragStartTime.current;
         if (duration > 500) {
           terminalLog(`>> Detect: real blur (${duration}ms) -> Exit`);
           exitDragging();
-        } else {
-          // terminalLog(`>> Ignored: system-induced blur during start_drag (${duration}ms)`);
         }
       };
 
@@ -90,7 +84,6 @@ export const useHeaderStateMachine = (viewMode: ViewMode, onToggleExpand: () => 
     setOverlayState('DRAGGING');
     terminalLog(">> Action: mousedown -> DRAGGING");
 
-    // 执行原生拖拽
     invoke('start_drag').catch((err) => {
       terminalLog(`!! start_drag ERROR: ${err}`);
       setOverlayState('IDLE');
@@ -102,9 +95,9 @@ export const useHeaderStateMachine = (viewMode: ViewMode, onToggleExpand: () => 
     if (target.closest('button')) return;
     
     const duration = Date.now() - dragStartTime.current;
-    if (viewMode === 'compact' && duration < 300) {
-      terminalLog(`>> Click -> Expanding`);
-      onToggleExpand();
+    if (duration < 300) {
+      terminalLog(`>> Click -> Action triggered`);
+      onAction();
     }
   };
 

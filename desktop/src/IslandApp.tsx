@@ -27,13 +27,12 @@ export const IslandApp = () => {
 
   return (
     <div className="flex items-center justify-center w-screen h-screen bg-transparent overflow-hidden select-none">
-      <AppContainer viewMode="compact" status={status}>
+      <AppContainer>
         <DynamicHeader 
           status={status}
           roomId={session.roomId}
           roomNumber={session.roomNumber}
-          viewMode="compact"
-          onToggleExpand={toggleSettings}
+          onAction={toggleSettings}
           recentText={recentText}
         />
       </AppContainer>

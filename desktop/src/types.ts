@@ -7,5 +7,3 @@ export type SessionInfo = {
   roomId: string;
   roomNumber: string;
 };
-
-export type ViewMode = 'pairing' | 'compact' | 'history';
