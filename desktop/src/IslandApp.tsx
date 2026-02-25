@@ -26,7 +26,7 @@ export const IslandApp = () => {
   }, []);
 
   return (
-    <div className="flex items-center justify-center w-screen h-screen bg-transparent overflow-hidden select-none">
+    <div className="flex items-center justify-center w-full h-full bg-transparent overflow-hidden select-none">
       <AppContainer>
         <DynamicHeader 
           status={status}
