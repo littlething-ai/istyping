@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
-export type HeaderOverlayState = 'IDLE' | 'HOVER' | 'DRAGGING';
+export type HeaderOverlayState = 'IDLE' | 'HOVER' | 'CLICK' | 'DRAGGING';
 
 const terminalLog = (msg: string) => {
   invoke('js_log', { message: msg }).catch(() => {});
@@ -19,7 +19,7 @@ abstract class BaseState {
   onMouseEnter() {}
   onMouseLeave() {}
   onMouseDown(_e: React.MouseEvent) {}
-  onClick(_e: React.MouseEvent) {}
+  onMouseUp(_e: MouseEvent) {} // 全局 MouseUp
 }
 
 // --- 具体状态类 ---
@@ -45,16 +45,56 @@ class HoverState extends BaseState {
     if (e.button !== 0) return;
     if ((e.target as HTMLElement).closest('button')) return;
 
-    this.machine.setDragStartTime(Date.now());
-    this.machine.transitionTo('DRAGGING');
+    this.machine.transitionTo('CLICK');
   }
+}
+
+/**
+ * CLICK 状态：用户按下鼠标，等待判断是点击还是长按拖拽
+ */
+class ClickState extends BaseState {
+  readonly name = 'CLICK';
+  private timer: number | null = null;
+
+  enter() {
+    // 300ms 后自动转入拖拽状态
+    this.timer = window.setTimeout(() => {
+      this.machine.transitionTo('DRAGGING');
+    }, 300);
+
+    window.addEventListener('mouseup', this.handleGlobalMouseUp);
+  }
+
+  exit() {
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+    window.removeEventListener('mouseup', this.handleGlobalMouseUp);
+  }
+
+  onMouseLeave() {
+    this.machine.setIsMouseInside(false);
+  }
+
+  onMouseEnter() {
+    this.machine.setIsMouseInside(true);
+  }
+
+  private handleGlobalMouseUp = (_e: MouseEvent) => {
+    // 1秒内松手，视为点击
+    terminalLog(">> Click Detected");
+    this.machine.triggerAction();
+    this.machine.transitionTo(this.machine.getIsMouseInside() ? 'HOVER' : 'IDLE');
+  };
 }
 
 class DraggingState extends BaseState {
   readonly name = 'DRAGGING';
 
   enter() {
-    terminalLog(">> Action: mousedown -> DRAGGING");
+    terminalLog(">> Long Press -> Start Native Dragging");
+    this.machine.setDragStartTime(Date.now());
     
     invoke('start_drag').catch((err) => {
       terminalLog(`!! start_drag ERROR: ${err}`);
@@ -73,11 +113,12 @@ class DraggingState extends BaseState {
   }
 
   private handleGlobalMouseUp = (e: MouseEvent) => {
-    terminalLog(`>> Detect: mouseup (btn ${e.button})`);
+    terminalLog(`>> Drag End: mouseup (btn ${e.button})`);
     this.requestExit();
   };
 
   private handleGlobalMouseMove = () => {
+    // 即使在原生拖拽中，我们也通过位移尝试判断退出（部分OS特性支持）
     if (Date.now() - this.machine.getDragStartTime() > 200) {
       this.requestExit();
     }
@@ -86,7 +127,6 @@ class DraggingState extends BaseState {
   private handleGlobalBlur = () => {
     const duration = Date.now() - this.machine.getDragStartTime();
     if (duration > 500) {
-      terminalLog(`>> Detect: real blur (${duration}ms) -> Exit`);
       this.requestExit();
     }
   };
@@ -111,6 +151,7 @@ class StateMachine {
     this.states = {
       IDLE: new IdleState(this),
       HOVER: new HoverState(this),
+      CLICK: new ClickState(this),
       DRAGGING: new DraggingState(this)
     };
     this.currentState = this.states.IDLE;
@@ -119,6 +160,7 @@ class StateMachine {
   transitionTo(name: HeaderOverlayState) {
     if (this.currentState.name === name) return;
     
+    terminalLog(`[FSM] Transition: ${this.currentState.name} -> ${name}`);
     this.currentState.exit();
     this.currentState = this.states[name];
     this.setOverlayState(name);
@@ -130,14 +172,9 @@ class StateMachine {
   onMouseLeave() { this.currentState.onMouseLeave(); }
   onMouseDown(e: React.MouseEvent) { this.currentState.onMouseDown(e); }
   
-  onClick(e: React.MouseEvent) {
-    // Click 逻辑在状态机中作为统一行为处理，也可放在特定状态
-    const duration = Date.now() - this.dragStartTimeRef.current;
-    if (duration < 300 && !(e.target as HTMLElement).closest('button')) {
-      terminalLog(`>> Click -> Action triggered`);
-      this.onAction();
-    }
-    this.currentState.onClick(e);
+  // 外部不再直接处理 onClick，统一通过 mousedown/mouseup 状态转换处理
+  triggerAction() {
+    this.onAction();
   }
 
   // 上下文存取
@@ -159,7 +196,6 @@ export const useHeaderStateMachine = (onAction: () => void) => {
   const isMouseActuallyInside = useRef(false);
   const dragStartTime = useRef(0);
   
-  // 使用 Ref 保证 onAction 在状态机闭包中始终最新
   const onActionRef = useRef(onAction);
   onActionRef.current = onAction;
 
@@ -172,12 +208,11 @@ export const useHeaderStateMachine = (onAction: () => void) => {
     );
   }, []);
 
-  // 确保卸载时清理监听
   useEffect(() => {
     return () => machine.destroy();
   }, [machine]);
 
-  // Debug 心跳日志 (保持原有功能)
+  // Debug 心跳日志
   useEffect(() => {
     if (!isDev) return;
     const timer = setInterval(() => {
@@ -192,7 +227,8 @@ export const useHeaderStateMachine = (onAction: () => void) => {
       onMouseEnter: () => machine.onMouseEnter(),
       onMouseLeave: () => machine.onMouseLeave(),
       onMouseDown: (e: React.MouseEvent) => machine.onMouseDown(e),
-      onClick: (e: React.MouseEvent) => machine.onClick(e),
+      // 注意：onClick 已经在状态机内部通过 MouseUp 处理，这里传空或不传
+      onClick: (e: React.MouseEvent) => e.stopPropagation(), 
     }
   };
 };
