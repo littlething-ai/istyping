@@ -32,16 +32,19 @@ pub fn setup_socket(app_handle: AppHandle, session_state: Arc<std::sync::Mutex<c
         println!("[DEBUG] on_text received payload: {:?}", payload);
         let text_opt: Option<String> = match payload {
             Payload::Text(args) => args.get(0).and_then(|v| {
-                if v.is_string() { v.as_str().map(|s| s.to_string()) }
-                else { v.get("text").and_then(|t| t.as_str()).map(|s| s.to_string()) }
-            }),
-            Payload::String(s) => {
-                if let Ok(v) = serde_json::from_str::<serde_json::Value>(&s) {
-                    v.get("text").and_then(|t| t.as_str()).map(|s| s.to_string())
+                if let Some(s) = v.as_str() {
+                    // 如果是字符串，尝试解析为 JSON 并获取 "text" 字段 (类似之前的 Payload::String 逻辑)
+                    if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(s) {
+                        parsed.get("text").and_then(|t| t.as_str()).map(|s| s.to_string())
+                            .or_else(|| Some(s.to_string()))
+                    } else {
+                        Some(s.to_string())
+                    }
                 } else {
-                    Some(s)
+                    // 如果已经是对象，直接获取 "text" 字段
+                    v.get("text").and_then(|t| t.as_str()).map(|s| s.to_string())
                 }
-            },
+            }),
             _ => None
         };
         if let Some(text) = text_opt {
@@ -54,14 +57,17 @@ pub fn setup_socket(app_handle: AppHandle, session_state: Arc<std::sync::Mutex<c
     let on_control = move |payload: Payload, _socket: RawClient| {
          println!("[DEBUG] on_control received payload: {:?}", payload);
          let action_opt: Option<String> = match payload {
-             Payload::Text(args) => args.get(0).and_then(|v| v.get("action").and_then(|a| a.as_str()).map(|s| s.to_string())),
-             Payload::String(s) => {
-                if let Ok(v) = serde_json::from_str::<serde_json::Value>(&s) {
-                    v.get("action").and_then(|a| a.as_str()).map(|s| s.to_string())
-                } else {
-                    None
-                }
-             },
+             Payload::Text(args) => args.get(0).and_then(|v| {
+                 if let Some(s) = v.as_str() {
+                     if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(s) {
+                         parsed.get("action").and_then(|a| a.as_str()).map(|s| s.to_string())
+                     } else {
+                         None
+                     }
+                 } else {
+                     v.get("action").and_then(|a| a.as_str()).map(|s| s.to_string())
+                 }
+             }),
              _ => None
          };
          if let Some(action) = action_opt {
@@ -79,8 +85,13 @@ pub fn setup_socket(app_handle: AppHandle, session_state: Arc<std::sync::Mutex<c
 
     let on_registered = move |payload: Payload, _socket: RawClient| {
         let data_opt = match payload {
-            Payload::Text(args) => args.get(0).cloned(),
-            Payload::String(s) => serde_json::from_str(&s).ok(),
+            Payload::Text(args) => args.get(0).and_then(|v| {
+                if let Some(s) = v.as_str() {
+                    serde_json::from_str(s).ok()
+                } else {
+                    Some(v.clone())
+                }
+            }),
             _ => None
         };
         
