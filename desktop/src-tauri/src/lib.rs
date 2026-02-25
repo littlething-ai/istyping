@@ -44,6 +44,23 @@ pub fn run() {
 
         // 默认显示主窗口(灵动岛)
         let island_window = app.get_webview_window("main").unwrap();
+        
+        // 自动定位到屏幕底部中心
+        if let Ok(Some(monitor)) = island_window.primary_monitor() {
+            let monitor_size = monitor.size();
+            let scale_factor = monitor.scale_factor();
+            
+            // 灵动岛尺寸 200x60
+            let window_width = (200.0 * scale_factor) as u32;
+            let window_height = (60.0 * scale_factor) as u32;
+            
+            let x = (monitor_size.width - window_width) / 2;
+            // 距离屏幕底部边缘 100 物理像素 (约在任务栏上方)
+            let y = monitor_size.height - window_height - (100.0 * scale_factor) as u32;
+            
+            let _ = island_window.set_position(tauri::PhysicalPosition::new(x, y));
+        }
+
         let _ = island_window.show();
 
         // 处理 Settings 窗口的关闭行为：改为隐藏
