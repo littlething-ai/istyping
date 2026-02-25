@@ -106,6 +106,8 @@ pub fn setup_socket(app_handle: AppHandle, session_state: Arc<std::sync::Mutex<c
 
             let room_id_resp = data.get("roomId").and_then(|v| v.as_str()).unwrap_or("").to_string();
             
+            println!("[NET] Room Registered! Code: {} (ID: {})", room_number, room_id_resp);
+
             // 1. 保存到共享状态
             {
                 let mut state = session_state_clone.lock().unwrap();
@@ -118,12 +120,8 @@ pub fn setup_socket(app_handle: AppHandle, session_state: Arc<std::sync::Mutex<c
         }
     };
 
-    let on_open = move |_: Payload, socket: RawClient| {
-        let _ = socket.emit("register_room", json!(room_id_for_registration));
-    };
-
     let on_error = |payload: Payload, _socket: RawClient| {
-        eprintln!("[ERROR] Socket Error: {:?}", payload);
+        eprintln!("[NET] [ERROR] Socket Error: {:?}", payload);
     };
 
     let socket_url = if cfg!(debug_assertions) {
@@ -132,13 +130,37 @@ pub fn setup_socket(app_handle: AppHandle, session_state: Arc<std::sync::Mutex<c
         "http://istyping.app:3000"
     };
 
-    ClientBuilder::new(socket_url)
+    println!("[NET] Connecting to {} ...", socket_url);
+
+    let result = ClientBuilder::new(socket_url)
         .namespace("/")
-        .on("open", on_open)
         .on("error", on_error)
         .on("room_registered", on_registered)
         .on("receive_text", on_text)
         .on("receive_control", on_control)
-        .connect()
-        .ok();
+        .connect();
+
+    match result {
+        Ok(client) => {
+            println!("[NET] Client initialized successfully. Waiting 1 second before registering room (anti-race condition)...");
+            
+            // 稍微等待一下，确保底层的 WebSocket 和 Namespace 握手真正完成
+            std::thread::sleep(std::time::Duration::from_millis(1000));
+            
+            println!("[NET] Emitting 'register_room' event...");
+            // 使用最简纯字符串 Payload
+            match client.emit("register_room", json!(room_id_for_registration)) {
+                Ok(_) => println!("[NET] 'register_room' emit success (buffered/sent)."),
+                Err(e) => eprintln!("[NET] [ERROR] Failed to emit 'register_room': {:?}", e),
+            }
+
+            // 关键：保持线程存活，否则 client 会被 Drop，连接会断开
+            loop {
+                std::thread::sleep(std::time::Duration::from_secs(3600));
+            }
+        }
+        Err(e) => {
+            eprintln!("[NET] [FATAL] Failed to connect: {:?}", e);
+        }
+    }
 }
