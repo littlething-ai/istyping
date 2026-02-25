@@ -3,6 +3,7 @@ function New-HardLinkMirror {
     .SYNOPSIS
         递归地将源目录下的所有文件硬链接到目标目录，保持目录结构。
         默认开启镜像同步模式（会自动删除目标目录中多余的文件）。
+        支持使用正则表达式数组忽略特定文件或目录。
     #>
     param (
         [Parameter(Mandatory=$true, Position=0)]
@@ -12,8 +13,10 @@ function New-HardLinkMirror {
         [string]$DestPath,
 
         [Parameter(Mandatory=$false)]
-        # 修改点：赋值 = $true，使其默认开启
-        [switch]$Prune = $true 
+        [switch]$Prune = $true,
+
+        [Parameter(Mandatory=$false)]
+        [string[]]$Exclude = @() # <--- 现在这里接收的是正则表达式列表
     )
 
     $SourceAbsPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($SourcePath)
@@ -26,7 +29,7 @@ function New-HardLinkMirror {
     }
 
     if ((Split-Path $SourceAbsPath -Qualifier) -ne (Split-Path $DestAbsPath -Qualifier)) {
-        Write-Error "错误: 硬链接不能跨分区创建 (源在 $(Split-Path $SourceAbsPath -Qualifier), 目标在 $(Split-Path $DestAbsPath -Qualifier))"
+        Write-Error "错误: 硬链接不能跨分区创建"
         return
     }
 
@@ -34,16 +37,14 @@ function New-HardLinkMirror {
     Write-Host "源 (Source): $SourceAbsPath"
     Write-Host "目 (Target): $DestAbsPath"
     
-    # 提示当前模式
-    if ($Prune) { 
-        Write-Host "模式: 镜像同步 (Target 中多余文件将被删除)" -ForegroundColor Magenta 
-    }
-    else { 
-        Write-Host "模式: 仅增量 (Target 中多余文件将保留)" -ForegroundColor Gray 
+    if ($Prune) { Write-Host "模式: 镜像同步 (Target 中多余文件将被删除)" -ForegroundColor Magenta }
+    else { Write-Host "模式: 仅增量 (Target 中多余文件将保留)" -ForegroundColor Gray }
+
+    if ($Exclude.Count -gt 0) {
+        Write-Host "排除规则 (Regex): $($Exclude -join ', ')" -ForegroundColor DarkCyan
     }
     Write-Host ("-" * 50)
 
-    # 目标根目录检查
     if (!(Test-Path $DestAbsPath)) { 
         New-Item -ItemType Directory -Path $DestAbsPath -Force | Out-Null 
     }
@@ -53,9 +54,20 @@ function New-HardLinkMirror {
     # -----------------------------------------------------------
     Get-ChildItem -Path $SourceAbsPath -File -Recurse | ForEach-Object {
         $RelativePath = $_.FullName.Substring($SourceAbsPath.Length)
+
+        # 【修改点】逐个校验正则表达式
+        $isExcluded = $false
+        foreach ($pattern in $Exclude) {
+            if ($RelativePath -match $pattern) {
+                $isExcluded = $true
+                break
+            }
+        }
+        if ($isExcluded) { return } # 跳过当前文件
+
         $TargetFile = Join-Path $DestAbsPath $RelativePath
-        
         $TargetDir = Split-Path $TargetFile
+        
         if (!(Test-Path $TargetDir)) { 
             New-Item -ItemType Directory -Path $TargetDir -Force | Out-Null 
         }
@@ -81,6 +93,17 @@ function New-HardLinkMirror {
 
         foreach ($Item in $DestItems) {
             $RelPath = $Item.FullName.Substring($DestAbsPath.Length)
+
+            # 【修改点】逐个校验正则表达式
+            $isExcluded = $false
+            foreach ($pattern in $Exclude) {
+                if ($RelPath -match $pattern) {
+                    $isExcluded = $true
+                    break
+                }
+            }
+            if ($isExcluded) { continue } # 忽略的目录/文件不参与删除
+
             $SourceCheckPath = Join-Path $SourceAbsPath $RelPath
 
             if (!(Test-Path $SourceCheckPath)) {
@@ -99,4 +122,7 @@ function New-HardLinkMirror {
 }
 
 
-New-HardLinkMirror -SourcePath "..\istyping_memory" -DestPath ".\ref\memory"
+$DEFAULT_EXCLUDE_LIST = @(".git", "node_modules", "dist")
+
+
+New-HardLinkMirror -SourcePath "..\istyping_memory" -DestPath ".\ref\memory" -Exclude $DEFAULT_EXCLUDE_LIST
