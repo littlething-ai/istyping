@@ -3,7 +3,10 @@ import { invoke } from "@tauri-apps/api/core";
 
 export type HeaderOverlayState = 'IDLE' | 'HOVER' | 'CLICK' | 'DRAGGING';
 
+const ENABLE_LOGS = false; // 修改此开关以开启/关闭整个模块的日志
+
 const terminalLog = (msg: string) => {
+  if (!ENABLE_LOGS) return;
   invoke('js_log', { message: msg }).catch(() => {});
 };
 
