@@ -24,7 +24,7 @@ export const DynamicHeader = ({
       className="w-full flex items-center px-4 shrink-0 cursor-default"
       style={{ 
         position: 'relative',
-        height: '60px',
+        height: '100%',
         width: '100%',
         backgroundColor: 'rgba(255, 255, 255, 0.01)', 
       }} 

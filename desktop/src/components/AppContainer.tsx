@@ -12,7 +12,7 @@ export const AppContainer = ({ children, className }: AppContainerProps) => {
   return (
     <motion.div
       initial={false}
-      style={{ borderRadius: 30, width: 'calc(100% - 2px)', height: 'calc(100% - 2px)' }}
+      style={{ borderRadius: 30, width: 198, height: 58 }}
       className={cn(
         "glass overflow-hidden select-none relative flex flex-col cursor-default",
         className
