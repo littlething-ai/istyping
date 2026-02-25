@@ -147,10 +147,17 @@ pub fn setup_socket(app_handle: AppHandle, session_state: Arc<std::sync::Mutex<c
             // 稍微等待一下，确保底层的 WebSocket 和 Namespace 握手真正完成
             std::thread::sleep(std::time::Duration::from_millis(1000));
             
-            println!("[NET] Emitting 'register_room' event...");
-            // 使用最简纯字符串 Payload
-            match client.emit("register_room", json!(room_id_for_registration)) {
-                Ok(_) => println!("[NET] 'register_room' emit success (buffered/sent)."),
+            // 获取机器名
+            let device_name = std::env::var("COMPUTERNAME").unwrap_or_else(|_| "My Desktop".to_string());
+            
+            println!("[NET] Emitting 'register_room' event for {}...", device_name);
+            // 使用带有 metadata 的 Payload
+            match client.emit("register_room", json!({ 
+                "roomId": room_id_for_registration,
+                "deviceName": device_name,
+                "deviceType": "pc"
+            })) {
+                Ok(_) => println!("[NET] 'register_room' emit success."),
                 Err(e) => eprintln!("[NET] [ERROR] Failed to emit 'register_room': {:?}", e),
             }
 

@@ -2,14 +2,23 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
 import { getSocketUrl, isLocalEnv } from "../utils/env";
 
+export interface Participant {
+  id: string;
+  name: string;
+  type: 'pc' | 'mobile';
+}
+
 export const useSocket = () => {
   const [status, setStatus] = useState<"disconnected" | "connected">("disconnected");
   const [roomId, setRoomId] = useState("");
+  const [participants, setParticipants] = useState<Participant[]>([]);
   const socketRef = useRef<Socket | null>(null);
 
   const joinRoom = useCallback((id: string) => {
     if (!id || !socketRef.current) return;
-    socketRef.current.emit("join_room", id);
+    // 发送加入请求，带上设备名
+    const deviceName = `${window.navigator.platform.split(' ')[0]} Browser`;
+    socketRef.current.emit("join_room", { roomId: id, deviceName, deviceType: 'mobile' });
   }, []);
 
   const sendText = useCallback((text: string) => {
@@ -46,12 +55,19 @@ export const useSocket = () => {
       setRoomId(data.roomId);
     });
 
+    socket.on("room_update", (data: { participants: Participant[] }) => {
+      setParticipants(data.participants);
+    });
+
     socket.on("error_message", (msg: string) => {
       alert(msg);
       setRoomId("");
     });
 
-    socket.on("disconnect", () => setStatus("disconnected"));
+    socket.on("disconnect", () => {
+      setStatus("disconnected");
+      setParticipants([]);
+    });
 
     return () => {
       socket.disconnect();
@@ -61,6 +77,7 @@ export const useSocket = () => {
   return {
     status,
     roomId,
+    participants,
     setRoomId,
     joinRoom,
     sendText,
