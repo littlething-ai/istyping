@@ -12,5 +12,5 @@ export const getSocketUrl = (hostname: string) => {
   if (isLocalEnv(hostname)) {
     return `http://${hostname}:2020`;
   }
-  return "http://backend.istyping.app:2020";
+  return "http://backend.istyping.app";
 };
