@@ -10,7 +10,7 @@ export const isLocalEnv = (hostname: string) => {
 
 export const getSocketUrl = (hostname: string) => {
   if (isLocalEnv(hostname)) {
-    return `http://${hostname}:3000`;
+    return `http://${hostname}:2020`;
   }
-  return "http://istyping.app:3000";
+  return "http://backend.istyping.app:2020";
 };
