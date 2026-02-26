@@ -3,7 +3,6 @@
 
 ## Quick Start
 
-
 ```
 cd desktop
 npm install
@@ -20,4 +19,10 @@ node server.js
 cd web
 npm install
 npm run dev
+```
+
+## Vercel 推送
+
+```
+git config user.email xxx@xxx.com
 ```
