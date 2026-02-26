@@ -127,7 +127,7 @@ pub fn setup_socket(app_handle: AppHandle, session_state: Arc<std::sync::Mutex<c
     let socket_url = if cfg!(debug_assertions) {
         "http://localhost:2020"
     } else {
-        "http://backend.istyping.app"
+        "https://backend.istyping.app"
     };
 
     println!("[NET] Connecting to {} ...", socket_url);
