@@ -2,23 +2,80 @@ mod session;
 mod input;
 mod socket;
 mod window_cmd;
+mod config;
 
 use std::sync::{Arc, Mutex};
-use session::{SessionInfo, SessionState, get_session_info};
+use std::sync::atomic::{AtomicBool, Ordering};
+use session::{SessionInfo, SessionState, get_session_info, ConnectionStatus};
 use socket::setup_socket;
 use window_cmd::{set_window_size, start_drag, js_log, show_window, hide_window, close_window};
 use tauri::Manager;
+use config::{ServerConfig, load_config, save_config, get_actual_url};
+
+pub struct SocketManager {
+    pub stop_signal: Mutex<Arc<AtomicBool>>,
+}
+
+#[tauri::command]
+async fn get_server_config(app_handle: tauri::AppHandle) -> ServerConfig {
+    load_config(&app_handle)
+}
+
+#[tauri::command]
+async fn update_server_config(
+    app_handle: tauri::AppHandle, 
+    config: ServerConfig, 
+    socket_manager: tauri::State<'_, SocketManager>,
+    session_state: tauri::State<'_, SessionState>
+) -> Result<(), String> {
+    save_config(&app_handle, &config)?;
+    
+    // 1. 停止旧的连接
+    {
+        let stop_signal = socket_manager.stop_signal.lock().unwrap();
+        stop_signal.store(false, Ordering::SeqCst);
+    }
+    
+    // 给一点时间让旧线程退出
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+
+    // 2. 启动新的连接
+    let new_stop_signal = Arc::new(AtomicBool::new(true));
+    {
+        let mut stop_signal_lock = socket_manager.stop_signal.lock().unwrap();
+        *stop_signal_lock = new_stop_signal.clone();
+    }
+
+    let url = get_actual_url(&config);
+    let app_clone = app_handle.clone();
+    let session_clone = session_state.0.clone();
+    
+    std::thread::spawn(move || {
+        setup_socket(app_clone, session_clone, url, new_stop_signal);
+    });
+
+    Ok(())
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   let session_state = SessionState(Arc::new(Mutex::new(SessionInfo {
       room_id: "".into(),
       room_number: "------".into(),
+      participants: vec![],
+      status: ConnectionStatus::Disconnected,
+      server_url: "".into(),
   })));
   let session_state_clone = session_state.0.clone();
+  
+  let initial_stop_signal = Arc::new(AtomicBool::new(true));
+  let socket_manager = SocketManager {
+      stop_signal: Mutex::new(initial_stop_signal.clone()),
+  };
 
   tauri::Builder::default()
     .manage(session_state)
+    .manage(socket_manager)
     .plugin(tauri_plugin_shell::init())
     .invoke_handler(tauri::generate_handler![
         get_session_info, 
@@ -27,9 +84,15 @@ pub fn run() {
         js_log,
         show_window,
         hide_window,
-        close_window
+        close_window,
+        get_server_config,
+        update_server_config
     ])
     .setup(move |app| {
+        let app_handle = app.handle().clone();
+        let config = load_config(&app_handle);
+        let url = get_actual_url(&config);
+
         if cfg!(debug_assertions) {
             app.handle().plugin(
                 tauri_plugin_log::Builder::default()
@@ -85,10 +148,10 @@ pub fn run() {
             });
         }
 
-        let app_handle = app.handle().clone();
+        let session_state_for_init = session_state_clone.clone();
         
         std::thread::spawn(move || {
-            setup_socket(app_handle, session_state_clone);
+            setup_socket(app_handle, session_state_for_init, url, initial_stop_signal);
         });
 
         Ok(())

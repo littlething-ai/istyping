@@ -1,16 +1,19 @@
 import { create } from 'zustand';
-import { SessionInfo, DebugLog } from './types';
+import { SessionInfo, DebugLog, ServerConfig } from './types';
 import { listen } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
 
 interface AppState {
   status: 'standby' | 'ready' | 'typing';
   session: SessionInfo;
+  serverConfig: ServerConfig;
   history: string[];
   recentText: string;
   
   setStatus: (status: 'standby' | 'ready' | 'typing') => void;
   setSession: (session: SessionInfo) => void;
+  setServerConfig: (config: ServerConfig) => void;
+  updateServerConfig: (config: ServerConfig) => Promise<void>;
   addHistory: (text: string) => void;
   setRecentText: (text: string) => void;
   
@@ -19,12 +22,23 @@ interface AppState {
 
 export const useStore = create<AppState>((set, get) => ({
   status: 'standby',
-  session: { roomId: '', roomNumber: '------' },
+  session: { roomId: '', roomNumber: '------', participants: [], status: 'disconnected', serverUrl: '' },
+  serverConfig: { mode: 'auto', customUrl: '' },
   history: [],
   recentText: '',
 
   setStatus: (status) => set({ status }),
   setSession: (session) => set({ session }),
+  setServerConfig: (serverConfig) => set({ serverConfig }),
+  updateServerConfig: async (config) => {
+    try {
+      await invoke('update_server_config', { config });
+      set({ serverConfig: config });
+    } catch (e) {
+      console.error('Failed to update server config', e);
+      throw e;
+    }
+  },
   addHistory: (text) => set((state) => ({ 
     history: [text, ...state.history].slice(0, 50),
     recentText: text 
@@ -32,12 +46,16 @@ export const useStore = create<AppState>((set, get) => ({
   setRecentText: (text) => set({ recentText: text }),
 
   init: async () => {
-    // 1. 初始拉取 Session
+    // 1. 初始拉取 Session 和 ServerConfig
     try {
-      const data = await invoke<SessionInfo>('get_session_info');
-      if (data.roomId) set({ session: data });
+      const [session, config] = await Promise.all([
+        invoke<SessionInfo>('get_session_info'),
+        invoke<ServerConfig>('get_server_config')
+      ]);
+      if (session.roomId) set({ session });
+      set({ serverConfig: config });
     } catch (e) {
-      console.error('Failed to get session info', e);
+      console.error('Failed to initialize store', e);
     }
 
     // 2. 监听 Session 更新
