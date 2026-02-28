@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
 import { cn } from "../lib/utils";
 import { ReactNode } from "react";
-// Removed direct window import as it's handled in App.tsx
 
 interface AppContainerProps {
   children: ReactNode;
@@ -14,7 +13,7 @@ export const AppContainer = ({ children, className }: AppContainerProps) => {
       initial={false}
       style={{ borderRadius: 30, width: 198, height: 58 }}
       className={cn(
-        "glass overflow-hidden select-none relative flex flex-col cursor-default",
+        "glass overflow-hidden select-none relative flex flex-col cursor-default shadow-2xl",
         className
       )}
     >

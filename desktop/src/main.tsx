@@ -10,17 +10,26 @@ function Root() {
   const [label, setLabel] = useState<string | null>(null)
 
   useEffect(() => {
-    setLabel(getCurrentWindow().label)
+    // 立即尝试获取，同时也在 mount 后获取
+    const current = getCurrentWindow()
+    setLabel(current.label)
   }, [])
 
-  if (!label) return null
+  if (!label) {
+    return null
+  }
 
+  // 如果是主窗口(灵动岛)，不要包任何带有背景的 div
+  if (label === 'main') {
+    return <IslandApp />
+  }
+
+  // 其他窗口使用深色主题
   return (
-    <React.StrictMode>
-      {label === 'main' && <IslandApp />}
+    <div className="h-full w-full modern-bg text-white">
       {label === 'pairing' && <PairingApp />}
       {label === 'settings' && <SettingsApp />}
-    </React.StrictMode>
+    </div>
   )
 }
 

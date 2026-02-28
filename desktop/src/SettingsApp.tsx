@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useStore } from './store';
 import { HistoryList } from './components/HistoryList';
 import { invoke } from '@tauri-apps/api/core';
-import { Smartphone, RefreshCw, Server, Save } from 'lucide-react';
+import { Smartphone, RefreshCw, Server, Save, Clock, Shield, Settings2 } from 'lucide-react';
 import { ServerMode } from './types';
 
 export const SettingsApp = () => {
@@ -34,57 +34,77 @@ export const SettingsApp = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-[#121212] text-white p-6">
-      <div className="flex items-center justify-between mb-8 border-b border-white/10 pb-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight">Settings & History</h1>
-          <p className="text-xs text-gray-500 mt-1 uppercase tracking-widest">Manage your connection</p>
-        </div>
-      </div>
+    <div className="flex flex-col h-screen bg-[#0A0A0B] text-white overflow-hidden relative font-sans selection:bg-blue-500/30">
+      {/* Background Decor */}
+      <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/10 blur-[120px] rounded-full" />
+      <div className="absolute bottom-[-5%] left-[-5%] w-[30%] h-[30%] bg-purple-600/10 blur-[100px] rounded-full" />
 
-      <div className="overflow-y-auto pr-2 custom-scrollbar">
-        {/* 配对控制区 */}
-        <div className="mb-6 bg-white/5 rounded-2xl p-5 border border-white/5">
+      {/* Header */}
+      <header className="px-8 pt-8 pb-6 flex items-center justify-between relative z-10">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg shadow-blue-500/20">
+            <Settings2 size={22} className="text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+              Control Center
+            </h1>
+            <p className="text-[10px] text-blue-400/60 font-mono tracking-widest uppercase mt-0.5">istyping.desktop v0.1.0</p>
+          </div>
+        </div>
+      </header>
+
+      <main className="flex-1 overflow-y-auto px-8 pb-8 custom-scrollbar relative z-10 space-y-6">
+        {/* Device Status Card */}
+        <section className="group bg-white/[0.03] hover:bg-white/[0.05] border border-white/10 rounded-[24px] p-6 transition-all duration-300">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400">
-                <Smartphone size={20} />
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform duration-500">
+                  <Smartphone size={24} />
+                </div>
+                {session.status === 'connected' && (
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 border-2 border-[#0A0A0B] rounded-full animate-pulse" />
+                )}
               </div>
               <div>
-                <div className="text-sm font-bold">Device Connection</div>
-                <div className="text-[10px] text-gray-500 font-mono mt-0.5 tracking-wider uppercase">
-                  {session.roomId ? `Connected: ${session.roomNumber}` : 'No device connected'}
+                <h3 className="text-sm font-bold">Connection Status</h3>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className={`w-1.5 h-1.5 rounded-full ${session.status === 'connected' ? 'bg-green-500' : 'bg-gray-600'}`} />
+                  <span className="text-xs text-gray-400 font-mono">
+                    {session.status === 'connected' ? `Linked: ${session.roomNumber}` : 'Ready for pairing'}
+                  </span>
                 </div>
               </div>
             </div>
             <button 
               onClick={openPairing}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-2"
+              className="px-5 py-2.5 bg-white text-black hover:bg-blue-50 active:scale-95 text-xs font-bold rounded-xl transition-all flex items-center gap-2 shadow-xl shadow-white/5"
             >
-              <RefreshCw size={14} />
-              {session.roomId ? 'Reconnect' : 'Connect Device'}
+              <RefreshCw size={14} className={session.status === 'connecting' ? 'animate-spin' : ''} />
+              {session.roomId ? 'Manage Link' : 'Pair Device'}
             </button>
           </div>
-        </div>
+        </section>
 
-        {/* 服务器配置区 */}
-        <div className="mb-8 bg-white/5 rounded-2xl p-5 border border-white/5">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400">
-              <Server size={20} />
+        {/* Server Config Card */}
+        <section className="bg-white/[0.03] border border-white/10 rounded-[24px] p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400">
+              <Server size={18} />
             </div>
-            <div className="text-sm font-bold">Server Configuration</div>
+            <h3 className="text-sm font-bold tracking-tight">Server Endpoint</h3>
           </div>
           
-          <div className="grid grid-cols-2 gap-2 mb-4">
+          <div className="grid grid-cols-4 gap-2 mb-4">
             {(['auto', 'prod', 'dev', 'custom'] as ServerMode[]).map((mode) => (
               <button
                 key={mode}
                 onClick={() => setLocalConfig({ ...localConfig, mode })}
-                className={`px-3 py-2 rounded-lg text-xs font-medium transition-all border ${
+                className={`py-2 rounded-xl text-[10px] font-bold transition-all border ${
                   localConfig.mode === mode 
-                    ? 'bg-purple-600 border-purple-500 text-white' 
-                    : 'bg-white/5 border-white/5 text-gray-400 hover:bg-white/10'
+                    ? 'bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-500/20' 
+                    : 'bg-white/[0.02] border-white/5 text-gray-500 hover:border-white/20 hover:text-gray-300'
                 }`}
               >
                 {mode.toUpperCase()}
@@ -92,38 +112,55 @@ export const SettingsApp = () => {
             ))}
           </div>
 
-          {localConfig.mode === 'custom' && (
+          <div className="relative group">
             <input
               type="text"
-              value={localConfig.customUrl}
+              readOnly={localConfig.mode !== 'custom'}
+              value={localConfig.mode === 'custom' ? localConfig.customUrl : (localConfig.mode === 'dev' ? 'http://localhost:2020' : 'https://backend.istyping.app')}
               onChange={(e) => setLocalConfig({ ...localConfig, customUrl: e.target.value })}
-              placeholder="https://your-server.com"
-              className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-xs font-mono mb-4 focus:outline-none focus:border-purple-500/50"
+              className={`w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs font-mono mb-4 focus:outline-none focus:border-purple-500/50 transition-all ${localConfig.mode !== 'custom' ? 'text-gray-600' : 'text-purple-300'}`}
             />
-          )}
+          </div>
 
           <button
             onClick={handleSaveConfig}
             disabled={isSaving || JSON.stringify(localConfig) === JSON.stringify(serverConfig)}
-            className="w-full py-2.5 bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2"
+            className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 disabled:opacity-20 disabled:grayscale disabled:cursor-not-allowed text-white text-xs font-black rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-500/10 uppercase tracking-tighter"
           >
             <Save size={14} />
-            {isSaving ? 'Saving...' : 'Save & Reconnect'}
+            {isSaving ? 'Updating...' : 'Apply & Reconnect'}
           </button>
-        </div>
+        </section>
 
-        <div className="flex flex-col min-h-[300px]">
-          <HistoryList history={history} />
-        </div>
-      </div>
+        {/* History Section */}
+        <section className="flex flex-col min-h-[400px]">
+          <div className="flex items-center gap-3 mb-4 px-1">
+            <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-400">
+              <Clock size={18} />
+            </div>
+            <h3 className="text-sm font-bold tracking-tight">Recent Sessions</h3>
+            <div className="ml-auto flex gap-1">
+               <div className="w-1 h-1 rounded-full bg-orange-500/40" />
+               <div className="w-1 h-1 rounded-full bg-orange-500/20" />
+            </div>
+          </div>
+          <div className="bg-white/[0.01] border border-white/5 rounded-[24px] overflow-hidden">
+            <HistoryList history={history} />
+          </div>
+        </section>
+      </main>
       
-      <div className="mt-auto pt-4 border-t border-white/10 text-xs text-gray-600 flex justify-between items-center font-mono">
-        <span>V0.1.0</span>
-        <div className="flex gap-4">
-          <span className="hover:text-gray-400 cursor-pointer">Support</span>
-          <span className="hover:text-gray-400 cursor-pointer">Feedback</span>
+      {/* Footer */}
+      <footer className="px-8 py-6 border-t border-white/5 bg-[#0A0A0B]/80 backdrop-blur-md relative z-20 flex justify-between items-center">
+        <div className="flex items-center gap-2 text-[10px] font-mono text-gray-600">
+          <Shield size={12} className="text-green-900" />
+          <span>ENCRYPTED_P2P_SESSION</span>
         </div>
-      </div>
+        <div className="flex gap-6">
+          <button className="text-[10px] text-gray-500 hover:text-white transition-colors uppercase font-bold tracking-tighter">Support</button>
+          <button className="text-[10px] text-gray-500 hover:text-white transition-colors uppercase font-bold tracking-tighter">Feedback</button>
+        </div>
+      </footer>
     </div>
   );
 };
