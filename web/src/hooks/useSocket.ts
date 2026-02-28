@@ -11,8 +11,13 @@ export interface Participant {
 export const useSocket = () => {
   const [status, setStatus] = useState<"disconnected" | "connected">("disconnected");
   const [roomId, setRoomId] = useState("");
+  const currentRoomIdRef = useRef(roomId);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const socketRef = useRef<Socket | null>(null);
+
+  useEffect(() => {
+    currentRoomIdRef.current = roomId;
+  }, [roomId]);
 
   const joinRoom = useCallback((id: string) => {
     if (!id || !socketRef.current) return;
@@ -50,11 +55,11 @@ export const useSocket = () => {
 
     socket.on("connect", () => {
       setStatus("connected");
-      const currentRoomId = rId || (isLocalEnv(hostname) ? "000000" : "");
-      if (currentRoomId) {
-        joinRoom(currentRoomId);
+      const targetRoomId = currentRoomIdRef.current || rId || (isLocalEnv(hostname) ? "000000" : "");
+      if (targetRoomId) {
+        joinRoom(targetRoomId);
         // 延迟同步以确保加入成功
-        setTimeout(() => syncRoomInfo(currentRoomId), 500);
+        setTimeout(() => syncRoomInfo(targetRoomId), 500);
       }
     });
 
@@ -78,8 +83,12 @@ export const useSocket = () => {
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        const currentRoomId = rId || (isLocalEnv(hostname) ? "000000" : "");
-        syncRoomInfo(currentRoomId);
+        const targetRoomId = currentRoomIdRef.current || rId || (isLocalEnv(hostname) ? "000000" : "");
+        if (targetRoomId) {
+          // 为了防止服务端清理了房间，唤醒时不仅要同步，最好重新发起一次加入
+          joinRoom(targetRoomId);
+          setTimeout(() => syncRoomInfo(targetRoomId), 500);
+        }
       }
     };
 
