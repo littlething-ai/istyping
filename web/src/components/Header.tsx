@@ -31,8 +31,6 @@ export const Header = ({ status, roomId, participants, onRefresh }: HeaderProps)
 
   return (
     <div className="w-full mb-8 relative z-50">
-// ... (此处省略部分代码，我将使用更精准的上下文进行替换)
-
       <div className="flex justify-between items-start">
         <div className="flex flex-col">
           <h1 className="text-2xl font-black tracking-tighter text-white">
