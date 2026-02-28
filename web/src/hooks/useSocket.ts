@@ -31,6 +31,12 @@ export const useSocket = () => {
     socketRef.current.emit("send_control", { roomId, action });
   }, [roomId]);
 
+  const syncRoomInfo = useCallback((targetId: string) => {
+    if (socketRef.current?.connected && targetId) {
+      socketRef.current.emit("get_room_info", { roomId: targetId });
+    }
+  }, []);
+
   useEffect(() => {
     const hostname = window.location.hostname;
     const params = new URLSearchParams(window.location.search);
@@ -41,12 +47,6 @@ export const useSocket = () => {
       reconnectionAttempts: Infinity,
     });
     socketRef.current = socket;
-
-    const syncRoomInfo = (targetId: string) => {
-      if (socket.connected && targetId) {
-        socket.emit("get_room_info", { roomId: targetId });
-      }
-    };
 
     socket.on("connect", () => {
       setStatus("connected");
