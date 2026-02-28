@@ -44,7 +44,7 @@ pub fn setup_socket(
     }));
 
     // 生成 Room ID
-    let room_id: String = if cfg!(debug_assertions) && socket_url.contains("localhost") {
+    let room_id: String = if cfg!(debug_assertions) {
         "DEBUG_SESSION_ID".to_string()
     } else {
         let charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -59,7 +59,10 @@ pub fn setup_socket(
     
     let room_id_for_registration = room_id.clone();
 
+    let stop_signal_for_text = stop_signal.clone();
     let on_text = move |payload: Payload, _socket: RawClient| {
+        if !stop_signal_for_text.load(Ordering::SeqCst) { return; }
+        
         let text_opt: Option<String> = match payload {
             Payload::Text(args) => args.get(0).and_then(|v| {
                 if let Some(s) = v.as_str() {
@@ -81,7 +84,10 @@ pub fn setup_socket(
         }
     };
 
+    let stop_signal_for_control = stop_signal.clone();
     let on_control = move |payload: Payload, _socket: RawClient| {
+         if !stop_signal_for_control.load(Ordering::SeqCst) { return; }
+         
          let action_opt: Option<String> = match payload {
              Payload::Text(args) => args.get(0).and_then(|v| {
                  if let Some(s) = v.as_str() {
@@ -110,7 +116,10 @@ pub fn setup_socket(
 
     let session_state_for_update = session_state_clone.clone();
     let app_handle_for_update = app_handle_for_session.clone();
+    let stop_signal_for_update = stop_signal.clone();
     let on_room_update = move |payload: Payload, _socket: RawClient| {
+        if !stop_signal_for_update.load(Ordering::SeqCst) { return; }
+        
         let data_opt: Option<serde_json::Value> = match payload {
             Payload::Text(args) => args.get(0).and_then(|v| {
                 if let Some(s) = v.as_str() {
@@ -135,7 +144,10 @@ pub fn setup_socket(
 
     let session_state_for_reg = session_state_clone.clone();
     let app_handle_for_reg = app_handle_for_session.clone();
+    let stop_signal_for_reg = stop_signal.clone();
     let on_registered = move |payload: Payload, _socket: RawClient| {
+        if !stop_signal_for_reg.load(Ordering::SeqCst) { return; }
+        
         let data_opt: Option<serde_json::Value> = match payload {
             Payload::Text(args) => args.get(0).and_then(|v| {
                 if let Some(s) = v.as_str() {
@@ -173,7 +185,10 @@ pub fn setup_socket(
     };
 
     let session_state_for_error = session_state_clone.clone();
+    let stop_signal_for_error = stop_signal.clone();
     let on_error = move |payload: Payload, _socket: RawClient| {
+        if !stop_signal_for_error.load(Ordering::SeqCst) { return; }
+        
         eprintln!("[NET] [ERROR] Socket Error: {:?}", payload);
         {
             let mut state = session_state_for_error.lock().unwrap();
