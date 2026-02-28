@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Monitor, Smartphone, ChevronDown, ChevronUp } from 'lucide-react';
+import { Users, Monitor, Smartphone, ChevronDown, ChevronUp, RotateCw } from 'lucide-react';
 import { Participant } from '../hooks/useSocket';
 import { cn } from '../lib/utils';
 
@@ -10,16 +10,29 @@ interface HeaderProps {
   status: "disconnected" | "connected";
   roomId: string;
   participants: Participant[];
+  onRefresh?: () => void;
 }
 
-export const Header = ({ status, roomId, participants }: HeaderProps) => {
+export const Header = ({ status, roomId, participants, onRefresh }: HeaderProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const count = participants.length;
   const isSynced = status === 'connected' && count >= 2;
   const isWaiting = status === 'connected' && count === 1;
 
+  const handleRefresh = () => {
+    if (onRefresh && !isRefreshing) {
+      setIsRefreshing(true);
+      onRefresh();
+      // 模拟动画效果
+      setTimeout(() => setIsRefreshing(false), 1000);
+    }
+  };
+
   return (
     <div className="w-full mb-8 relative z-50">
+// ... (此处省略部分代码，我将使用更精准的上下文进行替换)
+
       <div className="flex justify-between items-start">
         <div className="flex flex-col">
           <h1 className="text-2xl font-black tracking-tighter text-white">
@@ -72,8 +85,22 @@ export const Header = ({ status, roomId, participants }: HeaderProps) => {
                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
                 className="absolute right-0 top-full mt-2 w-48 bg-black/80 backdrop-blur-xl border border-white/10 rounded-2xl p-2 shadow-2xl"
               >
-                <div className="px-2 py-1.5 text-[9px] font-bold text-gray-500 uppercase tracking-widest border-b border-white/5 mb-1">
-                  Connected Devices
+                <div className="px-2 py-1.5 flex justify-between items-center border-b border-white/5 mb-1">
+                  <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">
+                    Connected Devices
+                  </span>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRefresh();
+                    }}
+                    className={cn(
+                      "p-1 hover:bg-white/10 rounded-md transition-all outline-none",
+                      isRefreshing && "animate-spin text-blue-400"
+                    )}
+                  >
+                    <RotateCw size={10} className={cn(isRefreshing ? "text-blue-400" : "text-gray-500")} />
+                  </button>
                 </div>
                 <div className="flex flex-col gap-1">
                   {participants.length === 0 ? (

@@ -6,7 +6,7 @@ import { Header } from "../components/Header";
 import { RoomJoin } from "../components/RoomJoin";
 
 export default function Home() {
-  const { status, roomId, participants, setRoomId, joinRoom, sendText, sendControl } = useSocket();
+  const { status, roomId, participants, setRoomId, joinRoom, sendText, sendControl, syncRoomInfo } = useSocket();
   const [text, setText] = useState("");
 
   const handleSend = () => {
@@ -24,7 +24,12 @@ export default function Home() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-4 bg-gray-900 text-white">
-      <Header status={status} roomId={roomId} participants={participants} />
+      <Header 
+        status={status} 
+        roomId={roomId} 
+        participants={participants} 
+        onRefresh={() => syncRoomInfo(roomId)}
+      />
 
       {!roomId && <RoomJoin onJoin={joinRoom} />}
 

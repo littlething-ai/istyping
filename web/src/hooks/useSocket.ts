@@ -38,16 +38,23 @@ export const useSocket = () => {
 
     const socket = io(getSocketUrl(hostname), {
       transports: ["websocket"],
-      reconnectionAttempts: 5,
+      reconnectionAttempts: Infinity,
     });
     socketRef.current = socket;
 
+    const syncRoomInfo = (targetId: string) => {
+      if (socket.connected && targetId) {
+        socket.emit("get_room_info", { roomId: targetId });
+      }
+    };
+
     socket.on("connect", () => {
       setStatus("connected");
-      if (rId) {
-        joinRoom(rId);
-      } else if (isLocalEnv(hostname)) {
-        joinRoom("000000");
+      const currentRoomId = rId || (isLocalEnv(hostname) ? "000000" : "");
+      if (currentRoomId) {
+        joinRoom(currentRoomId);
+        // 延迟同步以确保加入成功
+        setTimeout(() => syncRoomInfo(currentRoomId), 500);
       }
     });
 
@@ -69,8 +76,18 @@ export const useSocket = () => {
       setParticipants([]);
     });
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        const currentRoomId = rId || (isLocalEnv(hostname) ? "000000" : "");
+        syncRoomInfo(currentRoomId);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       socket.disconnect();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [joinRoom]);
 
@@ -82,6 +99,7 @@ export const useSocket = () => {
     joinRoom,
     sendText,
     sendControl,
+    syncRoomInfo,
     socket: socketRef.current
   };
 };
