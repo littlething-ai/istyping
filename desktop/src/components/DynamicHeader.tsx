@@ -92,18 +92,13 @@ export const DynamicHeader = ({
 
       {/* --- 状态灯 (左侧) --- */}
       <div className="flex items-center justify-center w-8 h-8 mr-0 relative">
-        <motion.div
+        <div
           className={cn(
-            "w-2.5 h-2.5 rounded-full absolute z-10 pointer-events-none",
-            status === "standby" ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]" :
-            status === "ready" ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" :
-            "bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]"
+            "w-2 h-2 rounded-full absolute z-10 pointer-events-none transition-colors duration-300",
+            status === "standby" ? "bg-red-500/30" :
+            status === "ready" ? "bg-green-500/30 shadow-[0_0_4px_rgba(34,197,94,0.2)]" :
+            "bg-blue-500/50 shadow-[0_0_8px_rgba(59,130,246,0.3)]"
           )}
-          animate={{
-            scale: status === "typing" ? [1, 1.4, 1] : 1,
-            opacity: status === "typing" ? [0.8, 1, 0.8] : 1
-          }}
-          transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut" }}
         />
       </div>
 
