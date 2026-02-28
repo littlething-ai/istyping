@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Monitor, Smartphone, ChevronDown, ChevronUp, RotateCw } from 'lucide-react';
 import { Participant } from '../hooks/useSocket';
@@ -16,9 +16,28 @@ interface HeaderProps {
 export const Header = ({ status, roomId, participants, onRefresh }: HeaderProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const count = participants.length;
   const isSynced = status === 'connected' && count >= 2;
   const isWaiting = status === 'connected' && count === 1;
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsExpanded(false);
+      }
+    };
+
+    if (isExpanded) {
+      document.addEventListener('mousedown', handleClickOutside);
+    } else {
+      document.removeEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isExpanded]);
 
   const handleRefresh = () => {
     if (onRefresh && !isRefreshing) {
@@ -51,7 +70,7 @@ export const Header = ({ status, roomId, participants, onRefresh }: HeaderProps)
         </div>
 
         {/* 参与者 Pill */}
-        <div className="relative">
+        <div className="relative" ref={dropdownRef}>
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={() => setIsExpanded(!isExpanded)}
