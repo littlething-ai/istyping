@@ -18,6 +18,10 @@ pub enum ServerMode {
 pub struct ServerConfig {
     pub mode: ServerMode,
     pub custom_url: String,
+    #[serde(default)]
+    pub proxy_enabled: bool,
+    #[serde(default)]
+    pub proxy_url: String,
 }
 
 impl Default for ServerConfig {
@@ -25,6 +29,8 @@ impl Default for ServerConfig {
         Self {
             mode: ServerMode::Auto,
             custom_url: "http://localhost:2020".to_string(),
+            proxy_enabled: false,
+            proxy_url: "".to_string(),
         }
     }
 }
@@ -74,5 +80,19 @@ pub fn get_actual_url(config: &ServerConfig) -> String {
         ServerMode::Prod => "https://backend.istyping.app".to_string(),
         ServerMode::Dev => "http://localhost:2020".to_string(),
         ServerMode::Custom => config.custom_url.clone(),
+    }
+}
+
+pub fn apply_proxy_config(config: &ServerConfig) {
+    if config.proxy_enabled && !config.proxy_url.trim().is_empty() {
+        println!("[CONFIG] Applying proxy: {}", config.proxy_url);
+        std::env::set_var("HTTP_PROXY", config.proxy_url.trim());
+        std::env::set_var("HTTPS_PROXY", config.proxy_url.trim());
+        std::env::set_var("ALL_PROXY", config.proxy_url.trim());
+    } else {
+        println!("[CONFIG] Clearing proxy settings");
+        std::env::remove_var("HTTP_PROXY");
+        std::env::remove_var("HTTPS_PROXY");
+        std::env::remove_var("ALL_PROXY");
     }
 }

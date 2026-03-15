@@ -29,7 +29,7 @@ export const IslandApp = () => {
     <div className="flex items-center justify-center w-full h-full bg-transparent overflow-hidden select-none">
       <AppContainer>
         <DynamicHeader 
-          status={status}
+          status={session.status === 'connected' ? status : 'standby'}
           roomId={session.roomId}
           roomNumber={session.roomNumber}
           onAction={toggleSettings}

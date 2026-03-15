@@ -112,14 +112,38 @@ export const SettingsApp = () => {
             ))}
           </div>
 
-          <div className="relative group">
+          <div className="relative group mb-4">
             <input
               type="text"
               readOnly={localConfig.mode !== 'custom'}
               value={localConfig.mode === 'custom' ? localConfig.customUrl : (localConfig.mode === 'dev' ? 'http://localhost:2020' : 'https://backend.istyping.app')}
               onChange={(e) => setLocalConfig({ ...localConfig, customUrl: e.target.value })}
-              className={`w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs font-mono mb-4 focus:outline-none focus:border-purple-500/50 transition-all ${localConfig.mode !== 'custom' ? 'text-gray-600' : 'text-purple-300'}`}
+              className={`w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs font-mono focus:outline-none focus:border-purple-500/50 transition-all ${localConfig.mode !== 'custom' ? 'text-gray-600' : 'text-purple-300'}`}
             />
+          </div>
+
+          {/* Proxy Configuration */}
+          <div className="flex flex-col gap-3 mb-6 p-4 rounded-xl bg-black/20 border border-white/5">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold text-gray-300">HTTP/HTTPS Proxy</h4>
+              <button
+                onClick={() => setLocalConfig({ ...localConfig, proxyEnabled: !localConfig.proxyEnabled })}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${localConfig.proxyEnabled ? 'bg-purple-500' : 'bg-gray-600'}`}
+              >
+                <span
+                  className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${localConfig.proxyEnabled ? 'translate-x-5' : 'translate-x-1'}`}
+                />
+              </button>
+            </div>
+            {localConfig.proxyEnabled && (
+              <input
+                type="text"
+                placeholder="e.g. http://127.0.0.1:7890"
+                value={localConfig.proxyUrl}
+                onChange={(e) => setLocalConfig({ ...localConfig, proxyUrl: e.target.value })}
+                className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-purple-200 focus:outline-none focus:border-purple-500/50 transition-all"
+              />
+            )}
           </div>
 
           <button

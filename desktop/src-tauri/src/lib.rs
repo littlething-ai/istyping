@@ -29,6 +29,7 @@ async fn update_server_config(
     session_state: tauri::State<'_, SessionState>
 ) -> Result<(), String> {
     save_config(&app_handle, &config)?;
+    config::apply_proxy_config(&config);
     
     // 1. 停止旧的连接
     {
@@ -91,6 +92,7 @@ pub fn run() {
     .setup(move |app| {
         let app_handle = app.handle().clone();
         let config = load_config(&app_handle);
+        config::apply_proxy_config(&config);
         let url = get_actual_url(&config);
 
         if cfg!(debug_assertions) {
