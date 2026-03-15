@@ -27,6 +27,14 @@ export const PairingApp = () => {
     }
   };
 
+  const handleDisconnect = async () => {
+    try {
+      await invoke('disconnect_server');
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const getStatusIcon = () => {
     switch (status) {
       case 'connected': return <CheckCircle2 className="text-green-400" size={14} />;
@@ -148,15 +156,25 @@ export const PairingApp = () => {
         </div>
 
         {/* Footer Actions */}
-        <footer className="mt-auto pt-4 border-t border-white/5">
-          <button 
-            onClick={handleReconnect}
-            disabled={status === 'connecting'}
-            className="w-full flex items-center justify-center gap-2 bg-white text-black hover:bg-gray-100 py-4 rounded-2xl text-[11px] font-black uppercase tracking-tight transition-all active:scale-[0.98] shadow-xl disabled:opacity-50"
-          >
-            <RefreshCw size={14} className={status === 'connecting' ? 'animate-spin' : ''} />
-            Reconnect Cluster
-          </button>
+        <footer className="mt-auto pt-4 border-t border-white/5 flex gap-3">
+          {status === 'connected' ? (
+            <button 
+              onClick={handleDisconnect}
+              className="flex-1 flex items-center justify-center gap-2 bg-red-500/10 text-red-400 hover:bg-red-500/20 py-4 rounded-2xl text-[11px] font-black uppercase tracking-tight transition-all active:scale-[0.98]"
+            >
+              <X size={14} />
+              Disconnect Cluster
+            </button>
+          ) : (
+            <button 
+              onClick={handleReconnect}
+              disabled={status === 'connecting'}
+              className="flex-1 flex items-center justify-center gap-2 bg-white text-black hover:bg-gray-100 py-4 rounded-2xl text-[11px] font-black uppercase tracking-tight transition-all active:scale-[0.98] shadow-xl disabled:opacity-50"
+            >
+              <RefreshCw size={14} className={status === 'connecting' ? 'animate-spin' : ''} />
+              {status === 'disconnected' ? 'Connect Cluster' : 'Reconnect Cluster'}
+            </button>
+          )}
         </footer>
       </div>
     </div>

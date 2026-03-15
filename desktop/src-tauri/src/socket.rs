@@ -56,8 +56,40 @@ pub fn setup_socket(
             })
             .collect()
     };
-    
-    let room_id_for_registration = room_id.clone();
+
+    let stop_signal_for_connect = stop_signal.clone();
+    let room_id_for_connect = room_id.clone();
+    let on_connect = move |_: Payload, socket: RawClient| {
+        if !stop_signal_for_connect.load(Ordering::SeqCst) { return; }
+        println!("[NET] Connected/Reconnected! Emitting 'register_room'...");
+        let device_name = std::env::var("COMPUTERNAME").unwrap_or_else(|_| "My Desktop".to_string());
+        
+        // Give it a brief moment before emitting, just in case
+        std::thread::sleep(std::time::Duration::from_millis(500));
+        
+        match socket.emit("register_room", json!({ 
+            "roomId": room_id_for_connect,
+            "deviceName": device_name,
+            "deviceType": "pc"
+        })) {
+            Ok(_) => println!("[NET] 'register_room' emit success."),
+            Err(e) => eprintln!("[NET] [ERROR] Failed to emit 'register_room': {:?}", e),
+        }
+    };
+
+    let session_state_for_disconnect = session_state_clone.clone();
+    let stop_signal_for_disconnect = stop_signal.clone();
+    let app_handle_for_disconnect = app_handle_for_status.clone();
+    let on_disconnect = move |_: Payload, _socket: RawClient| {
+        if !stop_signal_for_disconnect.load(Ordering::SeqCst) { return; }
+        println!("[NET] Disconnected from server (will attempt reconnect)...");
+        {
+            let mut state = session_state_for_disconnect.lock().unwrap();
+            state.status = ConnectionStatus::Connecting;
+        }
+        let state = session_state_for_disconnect.lock().unwrap();
+        let _ = app_handle_for_disconnect.emit("session-info", &*state);
+    };
 
     let stop_signal_for_text = stop_signal.clone();
     let on_text = move |payload: Payload, _socket: RawClient| {
@@ -202,6 +234,8 @@ pub fn setup_socket(
 
     let result = ClientBuilder::new(socket_url)
         .namespace("/")
+        .on("open", on_connect)
+        .on("close", on_disconnect)
         .on("error", on_error)
         .on("room_registered", on_registered)
         .on("room_update", on_room_update)
@@ -212,20 +246,6 @@ pub fn setup_socket(
     match result {
         Ok(client) => {
             println!("[NET] Client initialized successfully.");
-            
-            std::thread::sleep(std::time::Duration::from_millis(1000));
-            
-            let device_name = std::env::var("COMPUTERNAME").unwrap_or_else(|_| "My Desktop".to_string());
-            
-            println!("[NET] Emitting 'register_room' event for {}...", device_name);
-            match client.emit("register_room", json!({ 
-                "roomId": room_id_for_registration,
-                "deviceName": device_name,
-                "deviceType": "pc"
-            })) {
-                Ok(_) => println!("[NET] 'register_room' emit success."),
-                Err(e) => eprintln!("[NET] [ERROR] Failed to emit 'register_room': {:?}", e),
-            }
 
             while stop_signal.load(Ordering::SeqCst) {
                 std::thread::sleep(std::time::Duration::from_millis(500));
@@ -236,6 +256,7 @@ pub fn setup_socket(
             {
                 let mut state = session_state_clone.lock().unwrap();
                 state.status = ConnectionStatus::Disconnected;
+                state.participants = vec![];
             }
             let state = session_state_clone.lock().unwrap();
             let _ = app_handle_for_status.emit("session-info", &*state);

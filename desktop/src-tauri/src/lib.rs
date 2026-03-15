@@ -22,6 +22,15 @@ async fn get_server_config(app_handle: tauri::AppHandle) -> ServerConfig {
 }
 
 #[tauri::command]
+async fn disconnect_server(
+    socket_manager: tauri::State<'_, SocketManager>,
+) -> Result<(), String> {
+    let stop_signal = socket_manager.stop_signal.lock().unwrap();
+    stop_signal.store(false, Ordering::SeqCst);
+    Ok(())
+}
+
+#[tauri::command]
 async fn update_server_config(
     app_handle: tauri::AppHandle, 
     config: ServerConfig, 
@@ -87,7 +96,8 @@ pub fn run() {
         hide_window,
         close_window,
         get_server_config,
-        update_server_config
+        update_server_config,
+        disconnect_server
     ])
     .setup(move |app| {
         let app_handle = app.handle().clone();
@@ -127,6 +137,14 @@ pub fn run() {
         }
 
         let _ = island_window.show();
+
+        // 处理 Main 窗口(灵动岛)的关闭行为：直接退出整个应用
+        let app_handle_for_exit = app.handle().clone();
+        island_window.on_window_event(move |event| {
+            if let tauri::WindowEvent::CloseRequested { .. } = event {
+                app_handle_for_exit.exit(0);
+            }
+        });
 
         // 处理 Settings 窗口的关闭行为：改为隐藏
         if let Some(settings_window) = app.get_webview_window("settings") {
