@@ -4,8 +4,8 @@ import { getSocketUrl, isLocalEnv } from "../utils/env";
 
 export interface Participant {
   id: string;
-  name: string;
-  type: 'pc' | 'mobile';
+  deviceName: string;
+  deviceType: 'pc' | 'mobile';
 }
 
 export const useSocket = () => {

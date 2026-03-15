@@ -129,14 +129,14 @@ export const Header = ({ status, roomId, participants, onRefresh }: HeaderProps)
                         className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/5 transition-colors"
                       >
                         <div className={cn(
-                          "w-7 h-7 rounded-lg flex items-center justify-center",
-                          p.type === 'pc' ? "bg-blue-500/20 text-blue-400" : "bg-purple-500/20 text-purple-400"
+                          "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
+                          p.deviceType === 'pc' ? "bg-blue-500/20 text-blue-400" : "bg-purple-500/20 text-purple-400"
                         )}>
-                          {p.type === 'pc' ? <Monitor size={14} /> : <Smartphone size={14} />}
+                          {p.deviceType === 'pc' ? <Monitor size={14} /> : <Smartphone size={14} />}
                         </div>
                         <div className="flex flex-col overflow-hidden">
-                          <span className="text-[11px] font-bold text-gray-200 truncate">{p.name}</span>
-                          <span className="text-[8px] text-gray-500 uppercase font-mono">{p.type}</span>
+                          <span className="text-[11px] font-bold text-gray-200 truncate">{p.deviceName}</span>
+                          <span className="text-[8px] text-gray-500 uppercase font-mono">{p.deviceType}</span>
                         </div>
                       </div>
                     ))
