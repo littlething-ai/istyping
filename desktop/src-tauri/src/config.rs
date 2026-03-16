@@ -38,13 +38,23 @@ pub struct ServerConfig {
 impl Default for ServerConfig {
     fn default() -> Self {
         Self {
-            mode: ServerMode::Auto,
+            mode: ServerMode::Prod,
             custom_url: "http://localhost:2020".to_string(),
             custom_room_id: "".to_string(),
             island_position: None,
             proxy_enabled: false,
             proxy_url: "".to_string(),
         }
+    }
+}
+
+fn normalize_server_config(config: &mut ServerConfig) {
+    if matches!(config.mode, ServerMode::Auto) {
+        config.mode = if cfg!(debug_assertions) {
+            ServerMode::Dev
+        } else {
+            ServerMode::Prod
+        };
     }
 }
 
@@ -65,7 +75,8 @@ pub fn load_config(app_handle: &AppHandle) -> ServerConfig {
     if path.exists() {
         if let Ok(content) = fs::read_to_string(&path) {
             println!("[CONFIG] Loading from {:?}: {}", path, content);
-            if let Ok(config) = serde_json::from_str::<ServerConfig>(&content) {
+            if let Ok(mut config) = serde_json::from_str::<ServerConfig>(&content) {
+                normalize_server_config(&mut config);
                 return config;
             } else {
                 eprintln!("[CONFIG] Failed to parse config JSON");
@@ -73,12 +84,16 @@ pub fn load_config(app_handle: &AppHandle) -> ServerConfig {
         }
     }
     println!("[CONFIG] Using default config");
-    ServerConfig::default()
+    let mut config = ServerConfig::default();
+    normalize_server_config(&mut config);
+    config
 }
 
 pub fn save_config(app_handle: &AppHandle, config: &ServerConfig) -> Result<(), String> {
     let path = get_config_path(app_handle);
-    let content = serde_json::to_string_pretty(config).map_err(|e| e.to_string())?;
+    let mut config_to_save = config.clone();
+    normalize_server_config(&mut config_to_save);
+    let content = serde_json::to_string_pretty(&config_to_save).map_err(|e| e.to_string())?;
     println!("[CONFIG] Saving to {:?}: {}", path, content);
     fs::write(path, content).map_err(|e| e.to_string())?;
     Ok(())

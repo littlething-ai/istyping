@@ -15,6 +15,21 @@ function Root() {
     setLabel(current.label)
   }, [])
 
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      return
+    }
+
+    const suppressContextMenu = (event: MouseEvent) => {
+      event.preventDefault()
+    }
+
+    window.addEventListener('contextmenu', suppressContextMenu)
+    return () => {
+      window.removeEventListener('contextmenu', suppressContextMenu)
+    }
+  }, [])
+
   if (!label) {
     return null
   }

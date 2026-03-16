@@ -96,8 +96,8 @@ export const SettingsApp = () => {
             <h3 className="text-sm font-bold tracking-tight">Server Endpoint</h3>
           </div>
           
-          <div className="grid grid-cols-4 gap-2 mb-4">
-            {(['auto', 'prod', 'dev', 'custom'] as ServerMode[]).map((mode) => (
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            {(['prod', 'dev', 'custom'] as ServerMode[]).map((mode) => (
               <button
                 key={mode}
                 onClick={() => setLocalConfig({ ...localConfig, mode })}
@@ -107,7 +107,7 @@ export const SettingsApp = () => {
                     : 'bg-white/[0.02] border-white/5 text-gray-500 hover:border-white/20 hover:text-gray-300'
                 }`}
               >
-                {mode.toUpperCase()}
+                {mode === 'prod' ? 'PRODUCTION' : mode.toUpperCase()}
               </button>
             ))}
           </div>

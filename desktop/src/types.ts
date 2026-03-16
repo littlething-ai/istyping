@@ -20,7 +20,7 @@ export type SessionInfo = {
   serverUrl: string;
 };
 
-export type ServerMode = 'auto' | 'prod' | 'dev' | 'custom';
+export type ServerMode = 'prod' | 'dev' | 'custom';
 
 export type IslandPosition = {
   x: number;

@@ -23,7 +23,7 @@ interface AppState {
 export const useStore = create<AppState>((set, get) => ({
   status: 'standby',
   session: { roomId: '', roomNumber: '------', participants: [], status: 'disconnected', serverUrl: '' },
-  serverConfig: { mode: 'auto', customUrl: '', customRoomId: '', islandPosition: null, proxyEnabled: false, proxyUrl: '' },
+  serverConfig: { mode: 'prod', customUrl: '', customRoomId: '', islandPosition: null, proxyEnabled: false, proxyUrl: '' },
   history: [],
   recentText: '',
 
