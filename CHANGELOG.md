@@ -2,6 +2,22 @@
 
 All notable project changes should be documented in this file.
 
+## 0.1.1 - 2026-03-17
+
+Public alpha polish release.
+
+### Improved
+
+- Disabled the desktop right-click context menu outside development builds
+- Simplified the desktop server endpoint selector to `PRODUCTION`, `DEV`, and `CUSTOM`
+- Normalized legacy `auto` endpoint configs during load and save
+- Updated the public website and release links for the new desktop build
+
+### Notes
+
+- Desktop support is still Windows only
+- The current desktop download is published as `istyping_0.1.1_x64_en-US.msi`
+
 ## 0.1.0 - 2026-03-17
 
 First public alpha release.

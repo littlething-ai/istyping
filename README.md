@@ -14,8 +14,8 @@ IsTyping is currently in public alpha. The core pairing and typing flow is usabl
 - Website: [https://istyping.app](https://istyping.app)
 - Web input: [https://istyping.app/input](https://istyping.app/input)
 - GitHub: [https://github.com/littlething-ai/istyping](https://github.com/littlething-ai/istyping)
-- Latest Windows download: [v0.1.0 MSI](https://github.com/littlething-ai/istyping/releases/download/v0.1.0/istyping_0.1.0_x64_en-US.msi)
-- Release notes: [v0.1.0](https://github.com/littlething-ai/istyping/releases/tag/v0.1.0)
+- Latest Windows download: [v0.1.1 MSI](https://github.com/littlething-ai/istyping/releases/download/v0.1.1/istyping_0.1.1_x64_en-US.msi)
+- Release notes: [v0.1.1](https://github.com/littlething-ai/istyping/releases/tag/v0.1.1)
 
 ## What It Does
 

@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 const WINDOWS_DOWNLOAD_URL =
-  "https://github.com/littlething-ai/istyping/releases/download/v0.1.0/istyping_0.1.0_x64_en-US.msi";
+  "https://github.com/littlething-ai/istyping/releases/download/v0.1.1/istyping_0.1.1_x64_en-US.msi";
 
 const faqItems = [
   {

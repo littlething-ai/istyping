@@ -49,7 +49,7 @@ export const SettingsApp = () => {
             <h1 className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
               Control Center
             </h1>
-            <p className="text-[10px] text-blue-400/60 font-mono tracking-widest uppercase mt-0.5">istyping.desktop v0.1.0</p>
+            <p className="text-[10px] text-blue-400/60 font-mono tracking-widest uppercase mt-0.5">istyping.desktop v0.1.1</p>
           </div>
         </div>
       </header>
