@@ -6,8 +6,8 @@ The project is still early, so the best contributions are focused bug fixes, cle
 
 ## Before You Start
 
-- Read the root [`README.md`](/D:/1_Workspace/little_thing/istyping/README.md)
-- Skim [`doc/README.md`](/D:/1_Workspace/little_thing/istyping/doc/README.md) for project context
+- Read the root [`README.md`](./README.md)
+- Skim [`doc/README.md`](./doc/README.md) for project context
 - Check whether the change belongs in `desktop`, `web`, or `backend`
 
 ## Development Setup

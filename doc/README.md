@@ -4,15 +4,15 @@ This folder contains product, architecture, launch, and release notes for IsTypi
 
 ## Product And Design
 
-- [`UI_DESIGN_CONCEPT.md`](/D:/1_Workspace/little_thing/istyping/doc/UI_DESIGN_CONCEPT.md): visual direction and UI intent
-- [`BRAND_ICON_GUIDE.md`](/D:/1_Workspace/little_thing/istyping/doc/BRAND_ICON_GUIDE.md): icon concept and branding notes
+- [`UI_DESIGN_CONCEPT.md`](./UI_DESIGN_CONCEPT.md): visual direction and UI intent
+- [`BRAND_ICON_GUIDE.md`](./BRAND_ICON_GUIDE.md): icon concept and branding notes
 
 ## Architecture And Runtime
 
-- [`CLIENT_NETWORK_ARCHITECTURE.md`](/D:/1_Workspace/little_thing/istyping/doc/CLIENT_NETWORK_ARCHITECTURE.md): desktop, web, and backend communication model
-- [`RUN_GUIDE.md`](/D:/1_Workspace/little_thing/istyping/doc/RUN_GUIDE.md): local run and workflow notes
+- [`CLIENT_NETWORK_ARCHITECTURE.md`](./CLIENT_NETWORK_ARCHITECTURE.md): desktop, web, and backend communication model
+- [`RUN_GUIDE.md`](./RUN_GUIDE.md): local run and workflow notes
 
 ## Website And Launch
 
-- [`WEBSITE_LAUNCH_COPY_AND_STRUCTURE.md`](/D:/1_Workspace/little_thing/istyping/doc/WEBSITE_LAUNCH_COPY_AND_STRUCTURE.md): homepage strategy and copy structure
-- [`RELEASE_DISTRIBUTION_GUIDE.md`](/D:/1_Workspace/little_thing/istyping/doc/RELEASE_DISTRIBUTION_GUIDE.md): release packaging and distribution guidance
+- [`WEBSITE_LAUNCH_COPY_AND_STRUCTURE.md`](./WEBSITE_LAUNCH_COPY_AND_STRUCTURE.md): homepage strategy and copy structure
+- [`RELEASE_DISTRIBUTION_GUIDE.md`](./RELEASE_DISTRIBUTION_GUIDE.md): release packaging and distribution guidance

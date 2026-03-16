@@ -33,10 +33,10 @@ IsTyping is currently in public alpha. The core pairing and typing flow is usabl
 
 ## Project Structure
 
-- [`desktop`](/D:/1_Workspace/little_thing/istyping/desktop): Tauri desktop app, pairing window, settings window, floating island UI
-- [`web`](/D:/1_Workspace/little_thing/istyping/web): Next.js marketing site and `/input` web client
-- [`backend`](/D:/1_Workspace/little_thing/istyping/backend): Express + Socket.IO room and relay service
-- [`doc`](/D:/1_Workspace/little_thing/istyping/doc): product, launch, release, and architecture notes
+- [`desktop`](./desktop): Tauri desktop app, pairing window, settings window, floating island UI
+- [`web`](./web): Next.js marketing site and `/input` web client
+- [`backend`](./backend): Express + Socket.IO room and relay service
+- [`doc`](./doc): product, launch, release, and architecture notes
 
 ## Quick Start
 
@@ -89,23 +89,23 @@ The Windows installer is generated under `desktop/src-tauri/target/release/bundl
 
 ## Documentation
 
-Start with [`doc/README.md`](/D:/1_Workspace/little_thing/istyping/doc/README.md) for a guide to the available docs.
+Start with [`doc/README.md`](./doc/README.md) for a guide to the available docs.
 
 Helpful documents:
-- [`RUN_GUIDE.md`](/D:/1_Workspace/little_thing/istyping/doc/RUN_GUIDE.md)
-- [`CLIENT_NETWORK_ARCHITECTURE.md`](/D:/1_Workspace/little_thing/istyping/doc/CLIENT_NETWORK_ARCHITECTURE.md)
-- [`WEBSITE_LAUNCH_COPY_AND_STRUCTURE.md`](/D:/1_Workspace/little_thing/istyping/doc/WEBSITE_LAUNCH_COPY_AND_STRUCTURE.md)
-- [`RELEASE_DISTRIBUTION_GUIDE.md`](/D:/1_Workspace/little_thing/istyping/doc/RELEASE_DISTRIBUTION_GUIDE.md)
+- [`RUN_GUIDE.md`](./doc/RUN_GUIDE.md)
+- [`CLIENT_NETWORK_ARCHITECTURE.md`](./doc/CLIENT_NETWORK_ARCHITECTURE.md)
+- [`WEBSITE_LAUNCH_COPY_AND_STRUCTURE.md`](./doc/WEBSITE_LAUNCH_COPY_AND_STRUCTURE.md)
+- [`RELEASE_DISTRIBUTION_GUIDE.md`](./doc/RELEASE_DISTRIBUTION_GUIDE.md)
 
 ## Contributing
 
 Contributions, bug reports, and product feedback are welcome.
 
-Please read [`CONTRIBUTING.md`](/D:/1_Workspace/little_thing/istyping/CONTRIBUTING.md) before opening a pull request.
+Please read [`CONTRIBUTING.md`](./CONTRIBUTING.md) before opening a pull request.
 
 ## Changelog
 
-Release history is tracked in [`CHANGELOG.md`](/D:/1_Workspace/little_thing/istyping/CHANGELOG.md).
+Release history is tracked in [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## License
 
