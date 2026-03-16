@@ -93,7 +93,7 @@ export const PairingApp = () => {
                <div className="p-3 bg-white rounded-2xl">
                 {roomId ? (
                   <QRCode 
-                    value={`https://is-typing.vercel.app/?room=${roomId}`} 
+                    value={`https://istyping.app/input?room=${roomId}`} 
                     size={140} 
                     renderAs="svg"
                   />
