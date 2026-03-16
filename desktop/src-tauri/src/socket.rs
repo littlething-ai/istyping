@@ -8,6 +8,8 @@ use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
 use crate::session::{ConnectionStatus, Participant, SessionInfo};
 
+const DEBUG_ROOM_ID: &str = "DEBUG_SESSION_ID";
+
 pub struct SocketState {
     pub stop_signal: Arc<AtomicBool>,
 }
@@ -16,6 +18,7 @@ pub fn setup_socket(
     app_handle: AppHandle, 
     session_state: Arc<Mutex<SessionInfo>>,
     socket_url: String,
+    room_id: String,
     stop_signal: Arc<AtomicBool>
 ) {
     let app_handle_for_text = app_handle.clone();
@@ -42,20 +45,6 @@ pub fn setup_socket(
         "status": "connecting",
         "serverUrl": socket_url.clone()
     }));
-
-    // 生成 Room ID
-    let room_id: String = if cfg!(debug_assertions) {
-        "DEBUG_SESSION_ID".to_string()
-    } else {
-        let charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-        let mut rng = rand::thread_rng();
-        (0..16)
-            .map(|_| {
-                let idx = rng.gen_range(0..charset.len());
-                charset.chars().nth(idx).unwrap()
-            })
-            .collect()
-    };
 
     let stop_signal_for_connect = stop_signal.clone();
     let room_id_for_connect = room_id.clone();
@@ -271,4 +260,24 @@ pub fn setup_socket(
             let _ = app_handle_for_status.emit("session-info", &*state);
         }
     }
+}
+
+pub fn resolve_room_id(custom_room_id: &str) -> String {
+    let trimmed = custom_room_id.trim();
+    if !trimmed.is_empty() {
+        return trimmed.to_string();
+    }
+
+    if cfg!(debug_assertions) {
+        return DEBUG_ROOM_ID.to_string();
+    }
+
+    let charset = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let mut rng = rand::thread_rng();
+    (0..16)
+        .map(|_| {
+            let idx = rng.gen_range(0..charset.len());
+            charset[idx] as char
+        })
+        .collect()
 }

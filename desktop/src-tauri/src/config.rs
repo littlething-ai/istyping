@@ -19,6 +19,8 @@ pub struct ServerConfig {
     pub mode: ServerMode,
     pub custom_url: String,
     #[serde(default)]
+    pub custom_room_id: String,
+    #[serde(default)]
     pub proxy_enabled: bool,
     #[serde(default)]
     pub proxy_url: String,
@@ -29,6 +31,7 @@ impl Default for ServerConfig {
         Self {
             mode: ServerMode::Auto,
             custom_url: "http://localhost:2020".to_string(),
+            custom_room_id: "".to_string(),
             proxy_enabled: false,
             proxy_url: "".to_string(),
         }

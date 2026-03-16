@@ -7,7 +7,7 @@ mod config;
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
 use session::{SessionInfo, SessionState, get_session_info, ConnectionStatus};
-use socket::setup_socket;
+use socket::{setup_socket, resolve_room_id};
 use window_cmd::{set_window_size, start_drag, js_log, show_window, hide_window, close_window};
 use tauri::Manager;
 use config::{ServerConfig, load_config, save_config, get_actual_url};
@@ -57,11 +57,12 @@ async fn update_server_config(
     }
 
     let url = get_actual_url(&config);
+    let room_id = resolve_room_id(&config.custom_room_id);
     let app_clone = app_handle.clone();
     let session_clone = session_state.0.clone();
     
     std::thread::spawn(move || {
-        setup_socket(app_clone, session_clone, url, new_stop_signal);
+        setup_socket(app_clone, session_clone, url, room_id, new_stop_signal);
     });
 
     Ok(())
@@ -104,6 +105,7 @@ pub fn run() {
         let config = load_config(&app_handle);
         config::apply_proxy_config(&config);
         let url = get_actual_url(&config);
+        let room_id = resolve_room_id(&config.custom_room_id);
 
         if cfg!(debug_assertions) {
             app.handle().plugin(
@@ -171,7 +173,7 @@ pub fn run() {
         let session_state_for_init = session_state_clone.clone();
         
         std::thread::spawn(move || {
-            setup_socket(app_handle, session_state_for_init, url, initial_stop_signal);
+            setup_socket(app_handle, session_state_for_init, url, room_id, initial_stop_signal);
         });
 
         Ok(())

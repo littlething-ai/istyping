@@ -122,6 +122,24 @@ export const SettingsApp = () => {
             />
           </div>
 
+          <div className="mb-6 p-4 rounded-xl bg-black/20 border border-white/5">
+            <div className="flex items-center justify-between gap-4 mb-3">
+              <div>
+                <h4 className="text-xs font-bold text-gray-300">Custom Room ID</h4>
+                <p className="text-[10px] text-gray-500 mt-1">
+                  Leave empty to use the default behavior. In local debug builds, empty falls back to the built-in dev room.
+                </p>
+              </div>
+            </div>
+            <input
+              type="text"
+              placeholder="e.g. dev-laptop-a"
+              value={localConfig.customRoomId}
+              onChange={(e) => setLocalConfig({ ...localConfig, customRoomId: e.target.value })}
+              className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-purple-200 focus:outline-none focus:border-purple-500/50 transition-all"
+            />
+          </div>
+
           {/* Proxy Configuration */}
           <div className="flex flex-col gap-3 mb-6 p-4 rounded-xl bg-black/20 border border-white/5">
             <div className="flex items-center justify-between">

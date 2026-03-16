@@ -25,6 +25,7 @@ export type ServerMode = 'auto' | 'prod' | 'dev' | 'custom';
 export type ServerConfig = {
   mode: ServerMode;
   customUrl: string;
+  customRoomId: string;
   proxyEnabled: boolean;
   proxyUrl: string;
 };
