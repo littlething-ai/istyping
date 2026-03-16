@@ -1,5 +1,8 @@
 import Link from "next/link";
 
+const WINDOWS_DOWNLOAD_URL =
+  "https://github.com/littlething-ai/istyping/releases/download/v0.1.0/istyping_0.1.0_x64_en-US.msi";
+
 const faqItems = [
   {
     q: "What is IsTyping?",
@@ -101,7 +104,7 @@ export default function Home() {
               </p>
               <div className="mt-8 flex flex-wrap gap-4">
                 <a
-                  href="#download"
+                  href={WINDOWS_DOWNLOAD_URL}
                   className="rounded-full bg-[#d55421] px-6 py-3 text-sm font-black uppercase tracking-[0.18em] text-white transition hover:brightness-105"
                 >
                   Download for Windows
@@ -248,12 +251,12 @@ export default function Home() {
               join from your mobile browser.
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
-              <a
-                href="#"
-                className="rounded-full bg-[#f2efe8] px-6 py-3 text-sm font-black uppercase tracking-[0.18em] text-[#11120f] transition hover:bg-white"
-              >
-                Download for Windows
-              </a>
+            <a
+              href={WINDOWS_DOWNLOAD_URL}
+              className="rounded-full bg-[#f2efe8] px-6 py-3 text-sm font-black uppercase tracking-[0.18em] text-[#11120f] transition hover:bg-white"
+            >
+              Download for Windows
+            </a>
               <Link
                 href="/input"
                 className="rounded-full border border-white/20 px-6 py-3 text-sm font-black uppercase tracking-[0.18em] text-white transition hover:border-white/40 hover:bg-white/10"
@@ -336,7 +339,7 @@ export default function Home() {
           </h2>
           <div className="mt-8 flex flex-wrap gap-4">
             <a
-              href="#download"
+              href={WINDOWS_DOWNLOAD_URL}
               className="rounded-full bg-[#d55421] px-6 py-3 text-sm font-black uppercase tracking-[0.18em] text-white transition hover:brightness-110"
             >
               Download for Windows
