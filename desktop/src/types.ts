@@ -22,10 +22,16 @@ export type SessionInfo = {
 
 export type ServerMode = 'auto' | 'prod' | 'dev' | 'custom';
 
+export type IslandPosition = {
+  x: number;
+  y: number;
+};
+
 export type ServerConfig = {
   mode: ServerMode;
   customUrl: string;
   customRoomId: string;
+  islandPosition?: IslandPosition | null;
   proxyEnabled: boolean;
   proxyUrl: string;
 };

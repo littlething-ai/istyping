@@ -28,9 +28,9 @@
         "title": "Is Typing - Pairing",
         "width": 350,
         "height": 550,
-        "resizable": true,
+        "resizable": false,
         "fullscreen": false,
-        "decorations": true,
+        "decorations": false,
         "transparent": false,
         "alwaysOnTop": true,
         "visible": false

@@ -1,4 +1,4 @@
-use tauri::{AppHandle, Manager, LogicalSize, Size, Window};
+use tauri::{AppHandle, LogicalSize, Manager, Size, Window};
 
 #[tauri::command]
 pub fn set_window_size(app_handle: AppHandle, label: String, width: f64, height: f64) {

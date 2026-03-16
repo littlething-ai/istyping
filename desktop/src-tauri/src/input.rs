@@ -1,14 +1,13 @@
 use std::thread;
 use std::time::Duration;
 use windows::Win32::Foundation::{LPARAM, WPARAM};
+use windows::Win32::UI::Input::Ime::ImmGetDefaultIMEWnd;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
-    SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_UNICODE, KEYEVENTF_KEYUP, VIRTUAL_KEY,
-    VK_SHIFT, VK_OEM_COMMA, VK_OEM_PERIOD, VK_OEM_1, VK_OEM_2, VK_OEM_3, VK_OEM_4, VK_OEM_5, VK_OEM_6, VK_OEM_7, VK_OEM_MINUS
+    SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, KEYEVENTF_UNICODE,
+    VIRTUAL_KEY, VK_OEM_1, VK_OEM_2, VK_OEM_3, VK_OEM_4, VK_OEM_5, VK_OEM_6, VK_OEM_7,
+    VK_OEM_COMMA, VK_OEM_MINUS, VK_OEM_PERIOD, VK_SHIFT,
 };
-use windows::Win32::UI::WindowsAndMessaging::{
-    GetForegroundWindow, SendMessageW, WM_IME_CONTROL
-};
-use windows::Win32::UI::Input::Ime::{ImmGetDefaultIMEWnd};
+use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, SendMessageW, WM_IME_CONTROL};
 
 const IMC_GETOPENSTATUS: WPARAM = WPARAM(0x0005);
 
@@ -34,25 +33,63 @@ fn send_physical_key(vk: VIRTUAL_KEY, need_shift: bool) {
     if need_shift {
         let shift_down = INPUT {
             r#type: INPUT_KEYBOARD,
-            Anonymous: INPUT_0 { ki: KEYBDINPUT { wVk: VK_SHIFT, wScan: 0, dwFlags: windows::Win32::UI::Input::KeyboardAndMouse::KEYBD_EVENT_FLAGS(0), time: 0, dwExtraInfo: 0 } },
+            Anonymous: INPUT_0 {
+                ki: KEYBDINPUT {
+                    wVk: VK_SHIFT,
+                    wScan: 0,
+                    dwFlags: windows::Win32::UI::Input::KeyboardAndMouse::KEYBD_EVENT_FLAGS(0),
+                    time: 0,
+                    dwExtraInfo: 0,
+                },
+            },
         };
-        unsafe { SendInput(&[shift_down], std::mem::size_of::<INPUT>() as i32); }
+        unsafe {
+            SendInput(&[shift_down], std::mem::size_of::<INPUT>() as i32);
+        }
     }
     let key_down = INPUT {
         r#type: INPUT_KEYBOARD,
-        Anonymous: INPUT_0 { ki: KEYBDINPUT { wVk: vk, wScan: 0, dwFlags: windows::Win32::UI::Input::KeyboardAndMouse::KEYBD_EVENT_FLAGS(0), time: 0, dwExtraInfo: 0 } },
+        Anonymous: INPUT_0 {
+            ki: KEYBDINPUT {
+                wVk: vk,
+                wScan: 0,
+                dwFlags: windows::Win32::UI::Input::KeyboardAndMouse::KEYBD_EVENT_FLAGS(0),
+                time: 0,
+                dwExtraInfo: 0,
+            },
+        },
     };
     let key_up = INPUT {
         r#type: INPUT_KEYBOARD,
-        Anonymous: INPUT_0 { ki: KEYBDINPUT { wVk: vk, wScan: 0, dwFlags: KEYEVENTF_KEYUP, time: 0, dwExtraInfo: 0 } },
+        Anonymous: INPUT_0 {
+            ki: KEYBDINPUT {
+                wVk: vk,
+                wScan: 0,
+                dwFlags: KEYEVENTF_KEYUP,
+                time: 0,
+                dwExtraInfo: 0,
+            },
+        },
     };
-    unsafe { SendInput(&[key_down, key_up], std::mem::size_of::<INPUT>() as i32); }
+    unsafe {
+        SendInput(&[key_down, key_up], std::mem::size_of::<INPUT>() as i32);
+    }
     if need_shift {
         let shift_up = INPUT {
             r#type: INPUT_KEYBOARD,
-            Anonymous: INPUT_0 { ki: KEYBDINPUT { wVk: VK_SHIFT, wScan: 0, dwFlags: KEYEVENTF_KEYUP, time: 0, dwExtraInfo: 0 } },
+            Anonymous: INPUT_0 {
+                ki: KEYBDINPUT {
+                    wVk: VK_SHIFT,
+                    wScan: 0,
+                    dwFlags: KEYEVENTF_KEYUP,
+                    time: 0,
+                    dwExtraInfo: 0,
+                },
+            },
         };
-        unsafe { SendInput(&[shift_up], std::mem::size_of::<INPUT>() as i32); }
+        unsafe {
+            SendInput(&[shift_up], std::mem::size_of::<INPUT>() as i32);
+        }
     }
 }
 
@@ -62,20 +99,38 @@ fn send_unicode_char(c: char) {
         let u16_code = *u16_ref;
         let input_down = INPUT {
             r#type: INPUT_KEYBOARD,
-            Anonymous: INPUT_0 { ki: KEYBDINPUT { wVk: VIRTUAL_KEY(0), wScan: u16_code, dwFlags: KEYEVENTF_UNICODE, time: 0, dwExtraInfo: 0 } },
+            Anonymous: INPUT_0 {
+                ki: KEYBDINPUT {
+                    wVk: VIRTUAL_KEY(0),
+                    wScan: u16_code,
+                    dwFlags: KEYEVENTF_UNICODE,
+                    time: 0,
+                    dwExtraInfo: 0,
+                },
+            },
         };
         let input_up = INPUT {
             r#type: INPUT_KEYBOARD,
-            Anonymous: INPUT_0 { ki: KEYBDINPUT { wVk: VIRTUAL_KEY(0), wScan: u16_code, dwFlags: KEYEVENTF_UNICODE | KEYEVENTF_KEYUP, time: 0, dwExtraInfo: 0 } },
+            Anonymous: INPUT_0 {
+                ki: KEYBDINPUT {
+                    wVk: VIRTUAL_KEY(0),
+                    wScan: u16_code,
+                    dwFlags: KEYEVENTF_UNICODE | KEYEVENTF_KEYUP,
+                    time: 0,
+                    dwExtraInfo: 0,
+                },
+            },
         };
-        unsafe { SendInput(&[input_down, input_up], std::mem::size_of::<INPUT>() as i32); }
+        unsafe {
+            SendInput(&[input_down, input_up], std::mem::size_of::<INPUT>() as i32);
+        }
     }
 }
 
 pub fn send_sequence(text: &str) {
     let target_hwnd = unsafe { GetForegroundWindow() };
     let ime_hwnd = unsafe { ImmGetDefaultIMEWnd(target_hwnd) };
-    
+
     let mut is_chinese_mode = false;
     if ime_hwnd.0 != 0 {
         let res = unsafe { SendMessageW(ime_hwnd, WM_IME_CONTROL, IMC_GETOPENSTATUS, LPARAM(0)) };
@@ -100,7 +155,7 @@ pub fn send_sequence(text: &str) {
         } else {
             send_unicode_char(c);
         }
-        
+
         thread::sleep(Duration::from_millis(20));
     }
 }

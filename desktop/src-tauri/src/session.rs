@@ -1,5 +1,5 @@
+use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
-use serde::{Serialize, Deserialize};
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]

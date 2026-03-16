@@ -15,11 +15,20 @@ pub enum ServerMode {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
+pub struct IslandPosition {
+    pub x: i32,
+    pub y: i32,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct ServerConfig {
     pub mode: ServerMode,
     pub custom_url: String,
     #[serde(default)]
     pub custom_room_id: String,
+    #[serde(default)]
+    pub island_position: Option<IslandPosition>,
     #[serde(default)]
     pub proxy_enabled: bool,
     #[serde(default)]
@@ -32,6 +41,7 @@ impl Default for ServerConfig {
             mode: ServerMode::Auto,
             custom_url: "http://localhost:2020".to_string(),
             custom_room_id: "".to_string(),
+            island_position: None,
             proxy_enabled: false,
             proxy_url: "".to_string(),
         }
@@ -39,7 +49,10 @@ impl Default for ServerConfig {
 }
 
 pub fn get_config_path(app_handle: &AppHandle) -> PathBuf {
-    let mut path = app_handle.path().app_config_dir().unwrap_or_else(|_| PathBuf::from("."));
+    let mut path = app_handle
+        .path()
+        .app_config_dir()
+        .unwrap_or_else(|_| PathBuf::from("."));
     if !path.exists() {
         let _ = fs::create_dir_all(&path);
     }

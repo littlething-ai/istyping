@@ -19,6 +19,10 @@ export const PairingApp = () => {
     invoke('hide_window', { label: 'pairing' }).catch(console.error);
   };
 
+  const handleStartDrag = () => {
+    invoke('start_drag').catch(console.error);
+  };
+
   const handleReconnect = async () => {
     try {
       await updateServerConfig(serverConfig);
@@ -49,13 +53,18 @@ export const PairingApp = () => {
       className="fixed inset-0 bg-[#080809] text-white overflow-hidden font-sans"
       style={{ backgroundColor: '#080809', color: 'white' }}
     >
+      <div className="absolute inset-x-0 top-0 h-5 z-30" onMouseDown={handleStartDrag} />
+      <div className="absolute inset-y-0 left-0 w-4 z-30" onMouseDown={handleStartDrag} />
+      <div className="absolute inset-y-0 right-0 w-4 z-30" onMouseDown={handleStartDrag} />
+      <div className="absolute inset-x-0 bottom-0 h-4 z-30" onMouseDown={handleStartDrag} />
+
       {/* Background Decor */}
       <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-blue-600/10 blur-[100px] rounded-full pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-600/10 blur-[100px] rounded-full pointer-events-none" />
 
       <div className="relative z-10 h-full flex flex-col p-6">
         {/* Header */}
-        <header className="flex items-center justify-between mb-8">
+        <header className="flex items-center justify-between mb-8 select-none" onMouseDown={handleStartDrag}>
           <div className="flex items-center gap-3">
             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10 bg-white/5`}>
               {getStatusIcon()}
@@ -70,6 +79,7 @@ export const PairingApp = () => {
           </div>
           <button 
             onClick={handleClose}
+            onMouseDown={(e) => e.stopPropagation()}
             className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded-full transition-all text-gray-400 hover:text-white"
           >
             <X size={18} />

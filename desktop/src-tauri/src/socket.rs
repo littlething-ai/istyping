@@ -1,12 +1,12 @@
-use tauri::{AppHandle, Emitter};
+use crate::input::send_sequence;
+use crate::session::{ConnectionStatus, Participant, SessionInfo};
+use enigo::{Direction, Enigo, Key, Keyboard, Settings};
+use rand::Rng;
 use rust_socketio::{ClientBuilder, Payload, RawClient};
 use serde_json::json;
-use enigo::{Enigo, Settings, Key, Direction, Keyboard};
-use crate::input::send_sequence;
-use rand::Rng;
-use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
-use crate::session::{ConnectionStatus, Participant, SessionInfo};
+use std::sync::{Arc, Mutex};
+use tauri::{AppHandle, Emitter};
 
 const DEBUG_ROOM_ID: &str = "DEBUG_SESSION_ID";
 
@@ -15,11 +15,11 @@ pub struct SocketState {
 }
 
 pub fn setup_socket(
-    app_handle: AppHandle, 
+    app_handle: AppHandle,
     session_state: Arc<Mutex<SessionInfo>>,
     socket_url: String,
     room_id: String,
-    stop_signal: Arc<AtomicBool>
+    stop_signal: Arc<AtomicBool>,
 ) {
     let app_handle_for_text = app_handle.clone();
     let app_handle_for_control = app_handle.clone();
@@ -37,30 +37,39 @@ pub fn setup_socket(
         state.status = ConnectionStatus::Connecting;
         state.server_url = socket_url.clone();
     }
-    
-    let _ = app_handle.emit("session-info", json!({ 
-        "roomId": "", 
-        "roomNumber": "------", 
-        "participants": [], 
-        "status": "connecting",
-        "serverUrl": socket_url.clone()
-    }));
+
+    let _ = app_handle.emit(
+        "session-info",
+        json!({
+            "roomId": "",
+            "roomNumber": "------",
+            "participants": [],
+            "status": "connecting",
+            "serverUrl": socket_url.clone()
+        }),
+    );
 
     let stop_signal_for_connect = stop_signal.clone();
     let room_id_for_connect = room_id.clone();
     let on_connect = move |_: Payload, socket: RawClient| {
-        if !stop_signal_for_connect.load(Ordering::SeqCst) { return; }
+        if !stop_signal_for_connect.load(Ordering::SeqCst) {
+            return;
+        }
         println!("[NET] Connected/Reconnected! Emitting 'register_room'...");
-        let device_name = std::env::var("COMPUTERNAME").unwrap_or_else(|_| "My Desktop".to_string());
-        
+        let device_name =
+            std::env::var("COMPUTERNAME").unwrap_or_else(|_| "My Desktop".to_string());
+
         // Give it a brief moment before emitting, just in case
         std::thread::sleep(std::time::Duration::from_millis(500));
-        
-        match socket.emit("register_room", json!({ 
-            "roomId": room_id_for_connect,
-            "deviceName": device_name,
-            "deviceType": "pc"
-        })) {
+
+        match socket.emit(
+            "register_room",
+            json!({
+                "roomId": room_id_for_connect,
+                "deviceName": device_name,
+                "deviceType": "pc"
+            }),
+        ) {
             Ok(_) => println!("[NET] 'register_room' emit success."),
             Err(e) => eprintln!("[NET] [ERROR] Failed to emit 'register_room': {:?}", e),
         }
@@ -70,7 +79,9 @@ pub fn setup_socket(
     let stop_signal_for_disconnect = stop_signal.clone();
     let app_handle_for_disconnect = app_handle_for_status.clone();
     let on_disconnect = move |_: Payload, _socket: RawClient| {
-        if !stop_signal_for_disconnect.load(Ordering::SeqCst) { return; }
+        if !stop_signal_for_disconnect.load(Ordering::SeqCst) {
+            return;
+        }
         println!("[NET] Disconnected from server (will attempt reconnect)...");
         {
             let mut state = session_state_for_disconnect.lock().unwrap();
@@ -82,65 +93,87 @@ pub fn setup_socket(
 
     let stop_signal_for_text = stop_signal.clone();
     let on_text = move |payload: Payload, _socket: RawClient| {
-        if !stop_signal_for_text.load(Ordering::SeqCst) { return; }
-        
+        if !stop_signal_for_text.load(Ordering::SeqCst) {
+            return;
+        }
+
         let text_opt: Option<String> = match payload {
             Payload::Text(args) => args.get(0).and_then(|v| {
                 if let Some(s) = v.as_str() {
                     if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(s) {
-                        parsed.get("text").and_then(|t| t.as_str()).map(|s| s.to_string())
+                        parsed
+                            .get("text")
+                            .and_then(|t| t.as_str())
+                            .map(|s| s.to_string())
                             .or_else(|| Some(s.to_string()))
                     } else {
                         Some(s.to_string())
                     }
                 } else {
-                    v.get("text").and_then(|t| t.as_str()).map(|s| s.to_string())
+                    v.get("text")
+                        .and_then(|t| t.as_str())
+                        .map(|s| s.to_string())
                 }
             }),
-            _ => None
+            _ => None,
         };
         if let Some(text) = text_opt {
-             let _ = app_handle_for_text.emit("debug-log", json!({ "type": "text", "content": text }));
-             send_sequence(&text);
+            let _ =
+                app_handle_for_text.emit("debug-log", json!({ "type": "text", "content": text }));
+            send_sequence(&text);
         }
     };
 
     let stop_signal_for_control = stop_signal.clone();
     let on_control = move |payload: Payload, _socket: RawClient| {
-         if !stop_signal_for_control.load(Ordering::SeqCst) { return; }
-         
-         let action_opt: Option<String> = match payload {
-             Payload::Text(args) => args.get(0).and_then(|v| {
-                 if let Some(s) = v.as_str() {
-                     if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(s) {
-                         parsed.get("action").and_then(|a| a.as_str()).map(|s| s.to_string())
-                     } else {
-                         None
-                     }
-                 } else {
-                     v.get("action").and_then(|a| a.as_str()).map(|s| s.to_string())
-                 }
-             }),
-             _ => None
-         };
-         if let Some(action) = action_opt {
-             let _ = app_handle_for_control.emit("debug-log", json!({ "type": "control", "content": action }));
-             if let Ok(mut enigo) = Enigo::new(&Settings::default()) {
-                 match action.as_str() {
-                     "enter" => { let _ = enigo.key(Key::Return, Direction::Click); },
-                     "backspace" => { let _ = enigo.key(Key::Backspace, Direction::Click); },
-                     _ => {} 
-                 }
-             }
-         }
+        if !stop_signal_for_control.load(Ordering::SeqCst) {
+            return;
+        }
+
+        let action_opt: Option<String> = match payload {
+            Payload::Text(args) => args.get(0).and_then(|v| {
+                if let Some(s) = v.as_str() {
+                    if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(s) {
+                        parsed
+                            .get("action")
+                            .and_then(|a| a.as_str())
+                            .map(|s| s.to_string())
+                    } else {
+                        None
+                    }
+                } else {
+                    v.get("action")
+                        .and_then(|a| a.as_str())
+                        .map(|s| s.to_string())
+                }
+            }),
+            _ => None,
+        };
+        if let Some(action) = action_opt {
+            let _ = app_handle_for_control
+                .emit("debug-log", json!({ "type": "control", "content": action }));
+            if let Ok(mut enigo) = Enigo::new(&Settings::default()) {
+                match action.as_str() {
+                    "enter" => {
+                        let _ = enigo.key(Key::Return, Direction::Click);
+                    }
+                    "backspace" => {
+                        let _ = enigo.key(Key::Backspace, Direction::Click);
+                    }
+                    _ => {}
+                }
+            }
+        }
     };
 
     let session_state_for_update = session_state_clone.clone();
     let app_handle_for_update = app_handle_for_session.clone();
     let stop_signal_for_update = stop_signal.clone();
     let on_room_update = move |payload: Payload, _socket: RawClient| {
-        if !stop_signal_for_update.load(Ordering::SeqCst) { return; }
-        
+        if !stop_signal_for_update.load(Ordering::SeqCst) {
+            return;
+        }
+
         let data_opt: Option<serde_json::Value> = match payload {
             Payload::Text(args) => args.get(0).and_then(|v| {
                 if let Some(s) = v.as_str() {
@@ -149,12 +182,14 @@ pub fn setup_socket(
                     Some(v.clone())
                 }
             }),
-            _ => None
+            _ => None,
         };
 
         if let Some(data) = data_opt {
             if let Some(participants_val) = data.get("participants") {
-                if let Ok(participants) = serde_json::from_value::<Vec<Participant>>(participants_val.clone()) {
+                if let Ok(participants) =
+                    serde_json::from_value::<Vec<Participant>>(participants_val.clone())
+                {
                     let mut state = session_state_for_update.lock().unwrap();
                     state.participants = participants.clone();
                     let _ = app_handle_for_update.emit("session-info", &*state);
@@ -167,8 +202,10 @@ pub fn setup_socket(
     let app_handle_for_reg = app_handle_for_session.clone();
     let stop_signal_for_reg = stop_signal.clone();
     let on_registered = move |payload: Payload, _socket: RawClient| {
-        if !stop_signal_for_reg.load(Ordering::SeqCst) { return; }
-        
+        if !stop_signal_for_reg.load(Ordering::SeqCst) {
+            return;
+        }
+
         let data_opt: Option<serde_json::Value> = match payload {
             Payload::Text(args) => args.get(0).and_then(|v| {
                 if let Some(s) = v.as_str() {
@@ -177,9 +214,9 @@ pub fn setup_socket(
                     Some(v.clone())
                 }
             }),
-            _ => None
+            _ => None,
         };
-        
+
         if let Some(data) = data_opt {
             let room_number = if let Some(n) = data.get("roomNumber").and_then(|v| v.as_str()) {
                 n.to_string()
@@ -189,9 +226,16 @@ pub fn setup_socket(
                 "------".to_string()
             };
 
-            let room_id_resp = data.get("roomId").and_then(|v| v.as_str()).unwrap_or("").to_string();
-            
-            println!("[NET] Room Registered! Code: {} (ID: {})", room_number, room_id_resp);
+            let room_id_resp = data
+                .get("roomId")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+
+            println!(
+                "[NET] Room Registered! Code: {} (ID: {})",
+                room_number, room_id_resp
+            );
 
             {
                 let mut state = session_state_for_reg.lock().unwrap();
@@ -208,8 +252,10 @@ pub fn setup_socket(
     let session_state_for_error = session_state_clone.clone();
     let stop_signal_for_error = stop_signal.clone();
     let on_error = move |payload: Payload, _socket: RawClient| {
-        if !stop_signal_for_error.load(Ordering::SeqCst) { return; }
-        
+        if !stop_signal_for_error.load(Ordering::SeqCst) {
+            return;
+        }
+
         eprintln!("[NET] [ERROR] Socket Error: {:?}", payload);
         {
             let mut state = session_state_for_error.lock().unwrap();
@@ -241,7 +287,7 @@ pub fn setup_socket(
             }
             println!("[NET] Stop signal received. Disconnecting...");
             let _ = client.disconnect();
-            
+
             {
                 let mut state = session_state_clone.lock().unwrap();
                 state.status = ConnectionStatus::Disconnected;
