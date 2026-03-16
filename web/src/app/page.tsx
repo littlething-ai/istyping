@@ -22,7 +22,7 @@ const faqItems = [
   },
   {
     q: "Is it open source yet?",
-    a: "Not fully yet. A public open-source release is planned after the alpha experience is polished.",
+    a: "Yes. IsTyping is now open source on GitHub, and the public alpha will keep evolving in the open.",
   },
   {
     q: "Which platforms are supported?",
@@ -300,16 +300,24 @@ export default function Home() {
 
       <section className="mx-auto max-w-6xl px-5 py-20 sm:px-8 lg:px-10">
         <div className="rounded-[36px] border border-black/8 bg-white p-8 lg:p-10">
-          <p className="text-sm font-black uppercase tracking-[0.24em] text-[#0d777a]">Open-source roadmap</p>
+          <p className="text-sm font-black uppercase tracking-[0.24em] text-[#0d777a]">Open source on GitHub</p>
           <h2 className="mt-4 text-3xl font-black tracking-[-0.04em] text-[#11120f] sm:text-4xl">
-            Shipping the alpha first, opening the project next
+            Follow the project, explore the code, and help improve it
           </h2>
           <p className="mt-5 max-w-3xl text-base leading-8 text-[#54574f] sm:text-lg">
-            We plan to open-source the project after polishing the first public alpha release. For now,
-            the focus is on improving the product experience, stability, and onboarding.
+            IsTyping is now open source. You can browse the repository, follow releases, and contribute
+            improvements as the public alpha keeps getting polished.
           </p>
+          <div className="mt-8">
+            <a
+              href="https://github.com/littlething-ai/istyping"
+              className="inline-flex rounded-full bg-[#11120f] px-6 py-3 text-sm font-black uppercase tracking-[0.18em] text-white transition hover:bg-[#242620]"
+            >
+              View on GitHub
+            </a>
+          </div>
           <p className="mt-4 text-sm text-[#6a6d63]">
-            GitHub release and source availability will be announced later.
+            Public alpha, actively evolving in the open.
           </p>
         </div>
       </section>
@@ -365,7 +373,7 @@ export default function Home() {
           <div className="flex flex-wrap gap-4 text-sm text-[#565a51]">
             <a href="#faq" className="transition hover:text-black">FAQ</a>
             <Link href="/input" className="transition hover:text-black">Web Input</Link>
-            <span>Roadmap</span>
+            <a href="https://github.com/littlething-ai/istyping" className="transition hover:text-black">GitHub</a>
             <span>Contact</span>
           </div>
         </div>
