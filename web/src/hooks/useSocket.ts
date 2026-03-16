@@ -2,6 +2,8 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
 import { getSocketUrl, isLocalEnv } from "../utils/env";
 
+const ROOM_STORAGE_KEY = "istyping.roomId";
+
 export interface Participant {
   id: string;
   deviceName: string;
@@ -14,6 +16,27 @@ export const useSocket = () => {
   const currentRoomIdRef = useRef(roomId);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const socketRef = useRef<Socket | null>(null);
+
+  const persistRoom = useCallback((nextRoomId: string) => {
+    const trimmed = nextRoomId.trim();
+    const url = new URL(window.location.href);
+
+    if (trimmed) {
+      window.localStorage.setItem(ROOM_STORAGE_KEY, trimmed);
+      url.searchParams.set("room", trimmed);
+    } else {
+      window.localStorage.removeItem(ROOM_STORAGE_KEY);
+      url.searchParams.delete("room");
+    }
+
+    window.history.replaceState({}, "", url.toString());
+  }, []);
+
+  const clearRoom = useCallback(() => {
+    setRoomId("");
+    setParticipants([]);
+    persistRoom("");
+  }, [persistRoom]);
 
   useEffect(() => {
     currentRoomIdRef.current = roomId;
@@ -45,7 +68,10 @@ export const useSocket = () => {
   useEffect(() => {
     const hostname = window.location.hostname;
     const params = new URLSearchParams(window.location.search);
-    const rId = params.get("room") || "";
+    const urlRoomId = params.get("room") || "";
+    const storedRoomId = window.localStorage.getItem(ROOM_STORAGE_KEY) || "";
+    const getPreferredRoomId = () =>
+      currentRoomIdRef.current || urlRoomId || storedRoomId || (isLocalEnv(hostname) ? "000000" : "");
 
     const socket = io(getSocketUrl(hostname), {
       transports: ["websocket"],
@@ -55,7 +81,7 @@ export const useSocket = () => {
 
     socket.on("connect", () => {
       setStatus("connected");
-      const targetRoomId = currentRoomIdRef.current || rId || (isLocalEnv(hostname) ? "000000" : "");
+      const targetRoomId = getPreferredRoomId();
       if (targetRoomId) {
         joinRoom(targetRoomId);
         // 延迟同步以确保加入成功
@@ -65,6 +91,7 @@ export const useSocket = () => {
 
     socket.on("joined_room_info", (data: { roomId: string }) => {
       setRoomId(data.roomId);
+      persistRoom(data.roomId);
     });
 
     socket.on("room_update", (data: { participants: Participant[] }) => {
@@ -73,7 +100,7 @@ export const useSocket = () => {
 
     socket.on("error_message", (msg: string) => {
       alert(msg);
-      setRoomId("");
+      clearRoom();
     });
 
     socket.on("disconnect", () => {
@@ -83,7 +110,7 @@ export const useSocket = () => {
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        const targetRoomId = currentRoomIdRef.current || rId || (isLocalEnv(hostname) ? "000000" : "");
+        const targetRoomId = getPreferredRoomId();
         if (targetRoomId) {
           // 为了防止服务端清理了房间，唤醒时不仅要同步，最好重新发起一次加入
           joinRoom(targetRoomId);
@@ -98,13 +125,14 @@ export const useSocket = () => {
       socket.disconnect();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [joinRoom]);
+  }, [clearRoom, joinRoom, persistRoom, syncRoomInfo]);
 
   return {
     status,
     roomId,
     participants,
-    setRoomId,
+    setRoomId: clearRoom,
+    clearRoom,
     joinRoom,
     sendText,
     sendControl,

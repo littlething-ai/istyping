@@ -6,7 +6,7 @@ import { Header } from "../components/Header";
 import { RoomJoin } from "../components/RoomJoin";
 
 export default function Home() {
-  const { status, roomId, participants, setRoomId, joinRoom, sendText, sendControl, syncRoomInfo } = useSocket();
+  const { status, roomId, participants, clearRoom, joinRoom, sendText, sendControl, syncRoomInfo } = useSocket();
   const [text, setText] = useState("");
 
   const handleSend = () => {
@@ -73,7 +73,7 @@ export default function Home() {
         <div className="mt-8 flex items-center gap-4 text-xs text-gray-500">
           <span>Connected to: <span className="font-mono font-bold text-gray-300">{roomId}</span></span>
           <button 
-            onClick={() => setRoomId("")}
+            onClick={clearRoom}
             className="underline hover:text-gray-300"
           >
             Change Room
