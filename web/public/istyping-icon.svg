@@ -1,0 +1,27 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="76" y1="56" x2="448" y2="460" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#163B46"/>
+      <stop offset="0.55" stop-color="#0D777A"/>
+      <stop offset="1" stop-color="#11120F"/>
+    </linearGradient>
+    <linearGradient id="phone" x1="84" y1="208" x2="210" y2="394" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#E06737"/>
+      <stop offset="1" stop-color="#C94A19"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="24" y="24" width="464" height="464" rx="112" fill="url(#bg)"/>
+
+  <rect x="190" y="140" width="220" height="152" rx="36" stroke="#F5F1E8" stroke-width="28"/>
+  <rect x="255" y="314" width="90" height="20" rx="10" fill="#F5F1E8"/>
+  <rect x="225" y="344" width="150" height="20" rx="10" fill="#F5F1E8"/>
+
+  <rect x="88" y="206" width="116" height="194" rx="34" fill="url(#phone)"/>
+  <rect x="107" y="232" width="78" height="126" rx="18" fill="#11120F"/>
+  <rect x="127" y="370" width="38" height="8" rx="4" fill="#F5F1E8"/>
+
+  <circle cx="244" cy="254" r="16" fill="#83F2EA"/>
+  <circle cx="284" cy="254" r="16" fill="#83F2EA"/>
+  <circle cx="324" cy="254" r="16" fill="#83F2EA"/>
+</svg>
